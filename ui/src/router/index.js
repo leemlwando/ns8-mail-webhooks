@@ -6,15 +6,21 @@ import Vue from "vue";
 import VueRouter from "vue-router";
 import Status from "../views/Status.vue";
 import Settings from "../views/Settings.vue";
+import MailWebhooks from "../views/MailWebhooks.vue";
 
 Vue.use(VueRouter);
 
 const routes = [
   {
     path: "/",
+    name: "MailWebhooks",
+    component: MailWebhooks,
+    alias: "/mail-webhooks", // important
+  },
+  {
+    path: "/status",
     name: "Status",
     component: Status,
-    alias: "/status", // important
   },
   {
     path: "/settings",

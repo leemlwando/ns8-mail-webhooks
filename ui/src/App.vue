@@ -52,12 +52,10 @@ export default {
     );
 
     // configure global shortcuts
-    core.$root.$emit("configureKeyboardShortcuts", window);
+    core.$root.$emit("configureKeyboardShortcuts", window);    const queryParams = this.getQueryParamsForApp();
+    const requestedPage = queryParams.page || "mail-webhooks";
 
-    const queryParams = this.getQueryParamsForApp();
-    const requestedPage = queryParams.page || "status";
-
-    if (requestedPage != "status") {
+    if (requestedPage != "mail-webhooks") {
       this.$router.replace(requestedPage);
     }
   },
