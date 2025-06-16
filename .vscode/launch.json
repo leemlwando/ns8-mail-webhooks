@@ -1,0 +1,71 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Backend API",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/imageroot/bin/entrypoint",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/imageroot/pypkg",
+                "DATABASE_URL": "sqlite:///${workspaceFolder}/data/schedules.db",
+                "DEBUG": "true",
+                "LOG_LEVEL": "DEBUG"
+            },
+            "args": [],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false
+        },
+        {
+            "name": "Debug Backend (uvicorn)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "mailwebhook.main:app",
+                "--reload",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8000"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/imageroot/pypkg"
+            },
+            "cwd": "${workspaceFolder}/imageroot/pypkg",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Run Tests",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "tests/",
+                "-v",
+                "--tb=short"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/imageroot/pypkg"
+            },
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Test IMAP Client",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/imageroot/pypkg/mailwebhook/imap_client.py",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/imageroot/pypkg",
+                "IMAP_HOST": "localhost",
+                "IMAP_PORT": "1025"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}
