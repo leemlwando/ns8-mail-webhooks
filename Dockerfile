@@ -14,7 +14,11 @@ LABEL org.nethserver.images="ghcr.io/leemlwando/ns8-mail-webhooks:latest"
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
+    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
+
+# Create directories
+RUN mkdir -p /var/lib/nethserver/mail-webhooks /imageroot /ui
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt /tmp/
@@ -24,11 +28,20 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 COPY imageroot /imageroot
 COPY ui/dist /ui
 
-# Make entrypoint executable
-RUN chmod +x /imageroot/bin/entrypoint
+# Make scripts executable
+RUN chmod +x /imageroot/bin/entrypoint && \
+    find /imageroot/actions -name "*.py" -exec chmod +x {} \; && \
+    find /imageroot/actions -name "*[0-9]*" -exec chmod +x {} \;
+
+# Set proper permissions
+RUN chown -R 1000:1000 /imageroot /ui /var/lib/nethserver/mail-webhooks
 
 # Set working directory
 WORKDIR /imageroot
+
+# Create a non-root user
+RUN useradd -u 1000 -m -s /bin/bash module-user
+USER module-user
 
 EXPOSE 8000
 

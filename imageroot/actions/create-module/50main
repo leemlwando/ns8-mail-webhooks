@@ -17,8 +17,22 @@ data = json.load(sys.stdin)
 # Connect to redis
 rdb = agent.redis_connect()
 
-# Start and enable the mail-webhooks systemd service
-agent.run_helper('systemctl', '--user', 'enable', '--now', 'mail-webhooks.service')
+# Initialize module configuration in Redis
+module_id = os.environ['MODULE_ID']
+rdb.hset(f'module/{module_id}/configuration', mapping={
+    'imap_host': data.get('imap_host', '127.0.0.1'),
+    'imap_port': str(data.get('imap_port', 993)),
+    'imap_ssl': str(data.get('imap_ssl', True)).lower(),
+    'webhook_timeout': '30',
+    'max_retries': '3',
+    'check_interval': '60'
+})
+
+# Create data directory
+os.makedirs('/var/lib/nethserver/mail-webhooks', mode=0o750, exist_ok=True)
+
+# Enable the mail-webhooks systemd service (but don't start it yet)
+agent.run_helper('systemctl', '--user', 'enable', 'mail-webhooks.service')
 
 # Output result
 json.dump({'configuration': data}, fp=sys.stdout)

@@ -53,3 +53,9 @@ response = agent.tasks.run(
 
 # Check if traefik configuration has been successful
 agent.assert_exp(response['exit_code'] == 0)
+
+# Start/restart the mail-webhooks service with new configuration
+agent.run_helper('systemctl', '--user', 'restart', 'mail-webhooks.service')
+
+# Output configuration result
+json.dump({'configuration': request}, fp=sys.stdout)

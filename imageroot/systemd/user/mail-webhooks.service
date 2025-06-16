@@ -26,7 +26,8 @@ ExecStart=/usr/bin/podman run \
     --env-file=environment \
     --volume=mail-webhooks-data:/var/lib/nethserver/mail-webhooks:Z \
     --workdir=/imageroot \
-    ${NS8_MAIL_WEBHOOKS_IMAGE} /imageroot/bin/entrypoint
+    --user=1000:1000 \
+    ${NS8_MAIL_WEBHOOKS_IMAGE}
 ExecStop=/usr/bin/podman stop --ignore --cidfile %t/mail-webhooks.ctr-id -t 10
 ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/mail-webhooks.ctr-id
 PIDFile=%t/mail-webhooks.pid
