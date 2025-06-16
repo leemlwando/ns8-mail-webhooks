@@ -24,7 +24,8 @@ env_vars = {
     'IMAP_PORT': str(imap_port),
     'POLLING_INTERVAL': str(polling_interval),
     'WEBHOOK_TIMEOUT': '30',
-    'DATABASE_URL': 'sqlite:////var/lib/nethserver/mail-webhooks/schedules.db'
+    'DATABASE_URL': 'sqlite:////var/lib/nethserver/mail-webhooks/schedules.db',
+    'NS8_MAIL_WEBHOOKS_IMAGE': os.environ.get('NS8_MAIL_WEBHOOKS_IMAGE', 'ghcr.io/leemlwando/ns8-mail-webhooks:latest')
 }
 
 # Write mailbox passwords from request (securely stored)

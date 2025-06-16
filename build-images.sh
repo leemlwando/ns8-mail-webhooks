@@ -15,10 +15,8 @@ repobase="${REPOBASE:-ghcr.io/leemlwando}"
 # Configure the image name
 reponame="ns8-mail-webhooks"
 
-# Create a new empty container image
-container=$(buildah from scratch)
-
-# Reuse existing nodebuilder-mail-webhooks container, to speed up builds
+# Build UI first
+echo "Building UI..."
 if ! buildah containers --format "{{.ContainerName}}" | grep -q nodebuilder-mail-webhooks; then
     echo "Pulling NodeJS runtime..."
     buildah from --name nodebuilder-mail-webhooks -v "${PWD}:/usr/src:Z" docker.io/library/node:22.16.0-slim
@@ -31,16 +29,28 @@ buildah run \
     nodebuilder-mail-webhooks \
     sh -c "yarn install && yarn build"
 
+# Create main application image
+echo "Building main application image..."
+container=$(buildah from docker.io/library/python:3.9-slim)
+
+# Install Python dependencies
+buildah copy "${container}" requirements.txt /tmp/
+buildah run "${container}" /bin/sh -c "pip install --no-cache-dir -r /tmp/requirements.txt"
+
 # Add imageroot directory to the container image
-buildah add "${container}" imageroot /imageroot
-buildah add "${container}" ui/dist /ui
+buildah copy "${container}" imageroot /imageroot
+buildah copy "${container}" ui/dist /ui
+
+# Make entrypoint executable
+buildah run "${container}" chmod +x /imageroot/bin/entrypoint
 
 # Setup the entrypoint, ask to reserve one TCP port with the label and set a rootless container
-buildah config --entrypoint=/ \
+buildah config --entrypoint="/imageroot/bin/entrypoint" \
+    --workingdir="/imageroot" \
     --label="org.nethserver.authorizations=traefik@node:routeadm" \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
-    --label="org.nethserver.images=${repobase}/mail-webhooks-backend:latest" \
+    --label="org.nethserver.images=${repobase}/ns8-mail-webhooks:latest" \
     "${container}"
 
 # Commit the image

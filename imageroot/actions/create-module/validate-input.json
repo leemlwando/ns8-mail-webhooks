@@ -1,0 +1,24 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "create-module input",
+    "description": "Create a new mail-webhooks module instance",
+    "type": "object",
+    "properties": {
+        "imap_host": {
+            "type": "string",
+            "description": "IMAP server hostname",
+            "default": "127.0.0.1"
+        },
+        "imap_port": {
+            "type": "integer",
+            "description": "IMAP server port",
+            "default": 993
+        },
+        "imap_ssl": {
+            "type": "boolean",
+            "description": "Use SSL for IMAP connection",
+            "default": true
+        }
+    },
+    "additionalProperties": false
+}

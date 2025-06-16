@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2023 Lee M. Lwando <leemlwando@gmail.com>
+# SPDX-License-Identifier: MIT
+#
+
+import json
+import sys
+import os
+import agent
+
+# Try to parse the stdin as JSON.
+# If parsing fails, output everything to stderr
+data = json.load(sys.stdin)
+
+# Connect to redis
+rdb = agent.redis_connect()
+
+# Start and enable the mail-webhooks systemd service
+agent.run_helper('systemctl', '--user', 'enable', '--now', 'mail-webhooks.service')
+
+# Output result
+json.dump({'configuration': data}, fp=sys.stdout)
