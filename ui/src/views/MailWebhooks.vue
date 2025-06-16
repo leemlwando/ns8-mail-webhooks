@@ -119,8 +119,10 @@ export default {
 </script>
 
 <style scoped lang="scss">
+@import "@/styles/carbon-utils";
+
 .page-title {
-  margin-bottom: $spacing-05;
+  margin-bottom: 1rem;
 }
 
 .page-title h2 {

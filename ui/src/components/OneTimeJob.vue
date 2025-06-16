@@ -384,28 +384,30 @@ export default {
 </script>
 
 <style scoped lang="scss">
+@import "@/styles/carbon-utils";
+
 .one-time-job {
-  padding: $spacing-05 0;
+  padding: 1rem 0;
 }
 
 .description-section {
-  margin-bottom: $spacing-05;
+  margin-bottom: 1rem;
   
   p {
-    color: $text-02;
+    color: #6f6f6f;
     margin: 0;
   }
 }
 
 .job-form {
-  margin-bottom: $spacing-06;
+  margin-bottom: 1.5rem;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: $spacing-05;
-  margin-bottom: $spacing-05;
+  gap: 1rem;
+  margin-bottom: 1rem;
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -415,7 +417,7 @@ export default {
 .form-column {
   display: flex;
   flex-direction: column;
-  gap: $spacing-04;
+  gap: 0.75rem;
 }
 
 .form-actions {
@@ -424,33 +426,33 @@ export default {
 }
 
 .job-status-section {
-  margin-top: $spacing-06;
+  margin-top: 1.5rem;
 }
 
 .job-status-content {
   .job-status-header {
-    margin-bottom: $spacing-04;
+    margin-bottom: 0.75rem;
     
     h4 {
-      margin: 0 0 $spacing-03 0;
+      margin: 0 0 0.75rem 0;
     }
   }
   
   .job-progress {
-    margin-bottom: $spacing-04;
+    margin-bottom: 0.75rem;
   }
   
   .job-details {
-    margin-bottom: $spacing-04;
+    margin-bottom: 0.75rem;
     
     p {
-      margin: $spacing-02 0;
+      margin: 0.5rem 0;
     }
   }
   
   .job-error {
-    margin-bottom: $spacing-04;
-    color: $support-01;
+    margin-bottom: 0.75rem;
+    color: #da1e28;
     
     p {
       margin: 0;
@@ -459,46 +461,46 @@ export default {
   
   .job-logs {
     h5 {
-      margin: 0 0 $spacing-03 0;
+      margin: 0 0 0.75rem 0;
     }
     
     .logs-container {
-      background: $ui-01;
-      border: 1px solid $ui-03;
+      background: #f4f4f4;
+      border: 1px solid #e0e0e0;
       border-radius: 4px;
-      padding: $spacing-03;
+      padding: 0.75rem;
       max-height: 200px;
       overflow-y: auto;
       font-family: monospace;
       font-size: 12px;
       
       .log-entry {
-        margin-bottom: $spacing-02;
+        margin-bottom: 0.5rem;
         
         .log-timestamp {
-          color: $text-03;
-          margin-right: $spacing-03;
+          color: #8d8d8d;
+          margin-right: 0.75rem;
         }
         
         .log-message {
-          color: $text-01;
+          color: #161616;
         }
         
         &.error {
           .log-message {
-            color: $support-01;
+            color: #da1e28;
           }
         }
         
         &.warning {
           .log-message {
-            color: $support-03;
+            color: #f1c21b;
           }
         }
         
         &.info {
           .log-message {
-            color: $support-04;
+            color: #0f62fe;
           }
         }
       }
@@ -507,14 +509,14 @@ export default {
 }
 
 .job-status-running {
-  border-left: 4px solid $support-04;
+  border-left: 4px solid #0f62fe;
 }
 
 .job-status-success {
-  border-left: 4px solid $support-02;
+  border-left: 4px solid #24a148;
 }
 
 .job-status-error {
-  border-left: 4px solid $support-01;
+  border-left: 4px solid #da1e28;
 }
 </style>

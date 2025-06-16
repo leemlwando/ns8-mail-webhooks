@@ -492,35 +492,37 @@ export default {
 </script>
 
 <style scoped lang="scss">
+@import "@/styles/carbon-utils";
+
 .scheduled-triggers {
-  padding: $spacing-05 0;
+  padding: 1rem 0;
 }
 
 .description-section {
-  margin-bottom: $spacing-05;
+  margin-bottom: 1rem;
   
   p {
-    color: $text-02;
+    color: #6f6f6f;
     margin: 0;
   }
 }
 
 .triggers-table-section {
-  margin-top: $spacing-05;
+  margin-top: 1rem;
 }
 
 .empty-state {
   text-align: center;
-  padding: $spacing-07;
+  padding: 2rem;
   
   .empty-state-content {
     h4 {
-      margin-bottom: $spacing-03;
+      margin-bottom: 0.75rem;
     }
     
     p {
-      color: $text-02;
-      margin-bottom: $spacing-05;
+      color: #6f6f6f;
+      margin-bottom: 1rem;
     }
   }
 }
