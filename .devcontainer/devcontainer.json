@@ -3,27 +3,49 @@
 {
   "name": "ns8-mail-webhooks",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm",
-  // Configure tool-specific properties.
+
+  // Features to add to the container
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {},
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "nodeGypDependencies": true,
+      "version": "22"
+    }
+  },
+
+  // Podman-specific run arguments (removed problematic Wayland mount)
+  "runArgs": [
+    "--userns=keep-id",
+    "--network=host"
+  ],
+  // Simplified mounts that work with Podman on Windows
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind"
+  ],
+
+  // User configuration
+  "containerUser": "node",
+  "remoteUser": "node",
+  "workspaceFolder": "/workspace",
+
+  // Post-create setup
+  "postCreateCommand": "cd /workspace/ui && npm install",
+
+  // Configure tool-specific properties
   "customizations": {
-    // Configure properties specific to VS Code.
     "vscode": {
-      // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "octref.vetur",
+        "octref.vetur", 
         "shenjiaolong.vue-helper",
         "waderyan.gitblame",
         "streetsidesoftware.code-spell-checker"
-      ]
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
     }
-  },
-  // If you're using docker to develop with vscode, comment all options below and rebuild without cache the container.
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,Z",
-  "workspaceFolder": "/workspace",
-  // --userns=keep-id is used to correctly mount podman volume
-  // --network=host is required for hot-reload
-  "runArgs": ["--userns=keep-id", "--network=host"],
-  "containerUser": "node",
-  "remoteUser": "node"
+  }
 }
