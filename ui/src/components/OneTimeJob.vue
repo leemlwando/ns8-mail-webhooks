@@ -301,14 +301,10 @@ export default {
       this.jobProgress = 0;
 
       const taskAction = "run-one-time-job";
-      const eventId = this.getUuid();
-
-      this.$root.$once(`${taskAction}-aborted-${eventId}`, this.runJobAborted);
+      const eventId = this.getUuid();      this.$root.$once(`${taskAction}-aborted-${eventId}`, this.runJobAborted);
 
       this.$root.$once(
         `${taskAction}-completed-${eventId}`,
-        this.runJobCompleted
-      );
         this.runJobCompleted
       );
 
