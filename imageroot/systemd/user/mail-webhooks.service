@@ -5,18 +5,19 @@
 
 #
 # This systemd unit starts a mail-webhooks instance using Podman.
-# Most parts of this file come from podman-generate-systemd.
 #
 [Unit]
-Description=mail-webhooks server
+Description=Mail Webhook Service
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Environment=PODMAN_SYSTEMD_UNIT=%n
 EnvironmentFile=%S/state/environment
 WorkingDirectory=%S/state
 Restart=always
+RestartSec=30
 ExecStartPre=/bin/rm -f %t/mail-webhooks.pid %t/mail-webhooks.ctr-id
-ExecStartPre=-runagent discover-smarthost
 ExecStart=/usr/bin/podman run \
     --detach \
     --conmon-pidfile=%t/mail-webhooks.pid \
@@ -24,8 +25,10 @@ ExecStart=/usr/bin/podman run \
     --cgroups=no-conmon \
     --replace --name=%N \
     --publish=127.0.0.1:${TCP_PORT}:8080 \
-    --env-file=smarthost.env \
-    ${ECHO_SERVER_IMAGE}
+    --env-file=%S/state/environment \
+    --volume=%S/state/data:/var/lib/nethserver/mail-webhook:Z \
+    --log-driver=journald \
+    ${MAIL_WEBHOOK_IMAGE}
 ExecStop=/usr/bin/podman stop --ignore --cidfile %t/mail-webhooks.ctr-id -t 10
 ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/mail-webhooks.ctr-id
 PIDFile=%t/mail-webhooks.pid

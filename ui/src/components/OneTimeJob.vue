@@ -181,6 +181,7 @@
 <script>
 import { UtilService, TaskService } from "@nethserver/ns8-ui-lib";
 import to from "await-to-js";
+import axios from "axios";
 
 export default {
   name: "OneTimeJob",
@@ -205,6 +206,7 @@ export default {
       jobProgressLabel: "",
       showDestructiveWarning: false,
       jobStatusPollingInterval: null,
+      currentJobId: null,
     };
   },
   computed: {
@@ -293,72 +295,57 @@ export default {
         return;
       }
 
-      this.confirmRunJob();
-    },    async confirmRunJob() {
+      this.confirmRunJob();    },    async confirmRunJob() {
       this.showDestructiveWarning = false;
       this.jobRunning = true;
       this.jobStatus = null;
       this.jobProgress = 0;
+      this.currentJobId = null;
 
-      const taskAction = "run-one-time-job";
-      const eventId = this.getUuid();      this.$root.$once(`${taskAction}-aborted-${eventId}`, this.runJobAborted);
+      try {
+        // Create job using the new API
+        const jobData = {
+          name: `One-time job - ${new Date().toISOString()}`,
+          mailbox: this.jobForm.mailbox,
+          webhook_url: this.jobForm.webhookUrl,
+          api_key: this.jobForm.apiKey || null,
+          payload_format: this.jobForm.payloadFormat,
+          post_processing: this.jobForm.postProcessing,
+        };
 
-      this.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.runJobCompleted
-      );
-
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          data: {
-            ...this.jobForm,
-          },
-          extra: {
-            title: this.$t("action." + taskAction),
-            eventId,
-          },        })
-      );
-      const err = res[0];
-
-      if (err) {
+        const res = await axios.post(`/api/jobs`, jobData);
+        
+        if (res.data && res.data.id) {
+          this.currentJobId = res.data.id;
+          this.jobStatus = {
+            status: "running",
+            details: this.jobForm,
+            startTime: new Date().toISOString(),
+          };
+          
+          // Start polling for job status
+          this.startJobStatusPolling();
+          
+          this.createSuccessNotificationForApp(
+            this.$t("mail_webhooks.job_started")
+          );
+        } else {
+          throw new Error("Invalid response from server");
+        }
+      } catch (error) {
         this.jobRunning = false;
+        this.jobStatus = {
+          status: "failed",
+          error: error.response?.data?.detail || error.message || "Unknown error",
+          details: this.jobForm,
+        };
+        
         this.createErrorNotificationForApp(
-          err,
+          error,
           this.$t("mail_webhooks.error_running_job")
         );
-        return;
       }
-
-      // Start polling for job status
-      this.startJobStatusPolling();
-    },
-    runJobAborted(taskResult) {
-      this.jobRunning = false;      this.jobStatus = {
-        status: "failed",
-        error: taskResult.error || "Job was aborted",
-        details: this.jobForm,
-      };
-      this.stopJobStatusPolling();
-    },
-    runJobCompleted(taskContext, taskResult) {
-      this.jobRunning = false;
-      this.jobStatus = {
-        status: "completed",
-        details: {
-          ...this.jobForm,
-          emailsProcessed: taskResult.output.emailsProcessed,
-          startTime: taskResult.output.startTime,
-          endTime: taskResult.output.endTime,
-        },        logs: taskResult.output.logs || [],
-      };
-      this.jobProgress = 100;
-      this.stopJobStatusPolling();
-      this.createSuccessNotificationForApp(
-        this.$t("mail_webhooks.job_started")
-      );
-    },
-    startJobStatusPolling() {
+    },    startJobStatusPolling() {
       // Poll every 2 seconds for job progress
       this.jobStatusPollingInterval = setInterval(async () => {
         await this.pollJobStatus();
@@ -371,11 +358,46 @@ export default {
       }
     },
     async pollJobStatus() {
-      // This would call an API to get the current job status
-      // For now, we'll simulate progress
-      if (this.jobRunning && this.jobProgress < 90) {
-        this.jobProgress += 10;
-        this.jobProgressLabel = `Processing emails... ${this.jobProgress}%`;
+      if (!this.currentJobId) return;
+
+      try {
+        const res = await axios.get(`/api/jobs/${this.currentJobId}`);
+        const job = res.data;
+
+        if (job) {
+          // Update progress based on status
+          if (job.status === 'running') {
+            this.jobProgress = Math.min(this.jobProgress + 5, 90);
+            this.jobProgressLabel = `Processing emails... ${this.jobProgress}%`;
+          } else if (job.status === 'completed') {
+            this.jobProgress = 100;
+            this.jobProgressLabel = "Completed";
+            this.jobRunning = false;
+            this.stopJobStatusPolling();
+            
+            this.jobStatus = {
+              status: "completed",
+              details: {
+                ...this.jobForm,
+                emailsProcessed: job.emails_processed || 0,
+                startTime: job.created_at,
+                endTime: job.updated_at,
+              },
+            };
+          } else if (job.status === 'failed') {
+            this.jobRunning = false;
+            this.stopJobStatusPolling();
+            
+            this.jobStatus = {
+              status: "failed",
+              error: job.error_message || "Job failed",
+              details: this.jobForm,
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error polling job status:', error);
+        // Don't stop polling on single error, might be temporary
       }
     },
     formatDateTime(timestamp) {

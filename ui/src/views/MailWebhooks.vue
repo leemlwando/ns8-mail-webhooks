@@ -39,6 +39,7 @@
 <script>
 import { UtilService, TaskService, IconService } from "@nethserver/ns8-ui-lib";
 import to from "await-to-js";
+import axios from "axios";
 import ScheduledTriggers from "@/components/ScheduledTriggers";
 import OneTimeJob from "@/components/OneTimeJob";
 
@@ -61,56 +62,22 @@ export default {
   created() {
     this.loadMailboxes();
   },
-  methods: {
-    async loadMailboxes() {
+  methods: {    async loadMailboxes() {
       this.loading.mailboxes = true;
       this.loading.page = true;
       
-      const taskAction = "list-user-mailboxes";
-      const eventId = this.getUuid();
-
-      // register to task error
-      this.$root.$once(
-        `${taskAction}-aborted-${eventId}`,
-        this.loadMailboxesAborted
-      );
-
-      // register to task completion
-      this.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.loadMailboxesCompleted
-      );
-
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          extra: {
-            title: this.$t("action." + taskAction),
-            isNotificationHidden: true,
-            eventId,
-          },
-        })
-      );
-      const err = res[0];
-
-      if (err) {
-        console.error(`error creating task ${taskAction}`, err);
+      try {
+        const res = await axios.get('/api/mailboxes');
+        this.mailboxes = res.data.mailboxes || [];
+      } catch (error) {
+        console.error('Error loading mailboxes:', error);
         this.createErrorNotificationForApp(
-          err,
-          this.$t("task.cannot_create_task", { action: taskAction })
+          error,
+          this.$t("mail_webhooks.error_loading_mailboxes") || "Failed to load mailboxes"
         );
-        this.loading.page = false;
-        this.loading.mailboxes = false;
-        return;
+        this.mailboxes = [];
       }
-    },
-    loadMailboxesAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
-      this.loading.page = false;
-      this.loading.mailboxes = false;
-    },
-    loadMailboxesCompleted(taskContext, taskResult) {
-      this.mailboxes = taskResult.output.mailboxes || [];
+      
       this.loading.page = false;
       this.loading.mailboxes = false;
     },

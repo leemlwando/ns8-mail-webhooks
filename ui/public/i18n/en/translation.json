@@ -28,11 +28,12 @@
         "node": "Node",
         "name": "Name",
         "size": "Size",
-        "created": "Created",
-        "mount": "Mount",
+        "created": "Created",        "mount": "Mount",
         "no_services": "No services",
         "no_images": "No images",
-        "no_volumes": "No volumes"
+        "no_volumes": "No volumes",
+        "backend_health": "Backend Health",
+        "backend_stats": "Job Statistics"
     },
     "mail_webhooks": {
         "title": "Mail Webhooks",
@@ -80,8 +81,7 @@
         "loading_mailboxes": "Loading mailboxes...",
         "error_loading_mailboxes": "Error loading mailboxes",
         "error_saving_trigger": "Error saving trigger",
-        "error_deleting_trigger": "Error deleting trigger",
-        "error_running_job": "Error running one-time job",
+        "error_deleting_trigger": "Error deleting trigger",        "error_running_job": "Error running one-time job",
         "trigger_saved": "Scheduled trigger saved successfully",
         "trigger_deleted": "Scheduled trigger deleted successfully",
         "job_started": "One-time job started successfully"

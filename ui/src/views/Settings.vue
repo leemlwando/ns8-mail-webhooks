@@ -264,6 +264,7 @@
 <script>
 import to from "await-to-js";
 import { mapState } from "vuex";
+import axios from "axios";
 import {
   UtilService,
   TaskService,
@@ -356,104 +357,55 @@ export default {
       }
 
       return isValid;
-    },
-    async getConfiguration() {
+    },    async getConfiguration() {
       this.loading.getConfiguration = true;
       this.error.getConfiguration = "";
       
-      const taskAction = "get-configuration";
-      const eventId = this.getUuid();
-
-      this.$root.$once(`${taskAction}-aborted-${eventId}`, this.getConfigurationAborted);
-      this.$root.$once(`${taskAction}-completed-${eventId}`, this.getConfigurationCompleted);
-
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          extra: {
-            title: this.$t("action." + taskAction),
-            isNotificationHidden: true,
-            eventId,
-          },
-        })
-      );
-      const err = res[0];
-
-      if (err) {
-        this.loading.getConfiguration = false;
-        return;
+      try {
+        const res = await axios.get('/api/config');
+        if (res.data) {
+          this.config = { ...this.config, ...res.data };
+        }
+      } catch (error) {
+        console.error('Error loading configuration:', error);
+        // Fall back to defaults
       }
-    },
-    getConfigurationAborted() {
+      
       this.loading.getConfiguration = false;
-    },
-    getConfigurationCompleted(taskContext, taskResult) {
-      this.loading.getConfiguration = false;
-      if (taskResult.output && taskResult.output.config) {
-        this.config = { ...this.config, ...taskResult.output.config };
+    },    async getModuleInfo() {
+      try {
+        const healthRes = await axios.get('/api/health');
+        const statsRes = await axios.get('/api/stats');
+        
+        this.moduleInfo = {
+          version: "1.0.0", // Could be retrieved from backend
+          status: healthRes.data.status === 'ok' ? 'running' : 'stopped',
+          lastUpdated: new Date().toISOString(),
+          activeTriggers: statsRes.data.total_triggers || 0,
+        };
+      } catch (error) {
+        console.error('Error loading module info:', error);
+        this.moduleInfo = {
+          version: "N/A",
+          status: "unknown",
+          lastUpdated: "",
+          activeTriggers: 0,
+        };
       }
-    },
-    async getModuleInfo() {
-      const taskAction = "get-module-info";
-      const eventId = this.getUuid();
-
-      this.$root.$once(`${taskAction}-completed-${eventId}`, this.getModuleInfoCompleted);
-
-      await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          extra: {
-            title: this.$t("action." + taskAction),
-            isNotificationHidden: true,
-            eventId,
-          },
-        })
-      );
-    },
-    getModuleInfoCompleted(taskContext, taskResult) {
-      if (taskResult.output) {
-        this.moduleInfo = { ...this.moduleInfo, ...taskResult.output };
-      }
-    },
-    async saveConfiguration() {
+    },async saveConfiguration() {
       if (!this.validateForm()) return;
 
       this.loading.configureModule = true;
       this.error.configureModule = "";
       
-      const taskAction = "configure-module";
-      const eventId = this.getUuid();
-
-      this.$root.$once(`${taskAction}-aborted-${eventId}`, this.saveConfigurationAborted);
-      this.$root.$once(`${taskAction}-completed-${eventId}`, this.saveConfigurationCompleted);
-
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          data: {
-            config: this.config,
-          },
-          extra: {
-            title: this.$t("action." + taskAction),
-            eventId,
-          },
-        })
-      );
-      const err = res[0];
-
-      if (err) {
-        this.loading.configureModule = false;
-        this.error.configureModule = err.message || this.$t("settings.save_error");
-        return;
+      try {
+        await axios.put('/api/config', this.config);
+        this.createSuccessNotificationForApp(this.$t("settings.configuration_saved"));
+      } catch (error) {
+        this.error.configureModule = error.response?.data?.detail || error.message || this.$t("settings.save_error");
       }
-    },
-    saveConfigurationAborted(taskResult) {
+      
       this.loading.configureModule = false;
-      this.error.configureModule = taskResult.error || this.$t("settings.save_error");
-    },
-    saveConfigurationCompleted() {
-      this.loading.configureModule = false;
-      this.createSuccessNotificationForApp(this.$t("settings.configuration_saved"));
     },
     resetToDefaults() {
       this.config = {

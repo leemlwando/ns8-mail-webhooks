@@ -20,12 +20,12 @@
       <cv-data-table
         v-if="triggers.length > 0"
         :columns="tableColumns"
-        :data="triggers"
+        :data="formattedTriggers"
         :loading="componentLoading.triggers"
       >
-        <template v-slot:cell:status="{ cell, row }">
+        <template v-slot:cell:is_active="{ cell, row }">
           <cv-toggle
-            :value="cell.value === 'active'"
+            :value="cell.value"
             @change="toggleTriggerStatus(row)"
             :disabled="componentLoading.toggleStatus"
             small
@@ -47,7 +47,7 @@
         </template>
       </cv-data-table>
 
-      <cv-tile v-else-if="!loading.triggers" class="empty-state">
+      <cv-tile v-else-if="!componentLoading.triggers" class="empty-state">
         <div class="empty-state-content">
           <h4>{{ $t("mail_webhooks.no_scheduled_triggers") }}</h4>
           <p>{{ $t("mail_webhooks.scheduled_triggers_description") }}</p>
@@ -232,17 +232,23 @@ export default {
         { key: "nextRun", header: this.$t("mail_webhooks.next_run") },
         { key: "actions", header: this.$t("common.actions") },
       ],
-    };
-  },
+    };  },
   computed: {
     isFormValid() {
       return (
+        this.triggerForm.name &&
         this.triggerForm.mailbox &&
-        this.triggerForm.webhookUrl &&
-        this.triggerForm.payloadFormat &&
-        this.triggerForm.schedule &&
+        this.triggerForm.webhook_url &&
+        this.triggerForm.payload_format &&
         this.validateForm()
       );
+    },
+    formattedTriggers() {
+      return this.triggers.map(trigger => ({
+        ...trigger,
+        // Format the data for display
+        actions: 'actions', // placeholder for actions column
+      }));
     },
   },
   created() {
@@ -251,30 +257,36 @@ export default {
   methods: {
     getEmptyTriggerForm() {
       return {
+        name: "",
         mailbox: "",
-        webhookUrl: "",
-        apiKey: "",
-        payloadFormat: "json",
-        schedule: "*/15 * * * *",
+        webhook_url: "",
+        api_key: "",
+        payload_format: "RAW",
+        is_active: true,
       };
     },
     validateForm() {
       this.triggerFormErrors = {};
       let isValid = true;
 
+      if (!this.triggerForm.name) {
+        this.triggerFormErrors.name = this.$t("common.required");
+        isValid = false;
+      }
+
       if (!this.triggerForm.mailbox) {
         this.triggerFormErrors.mailbox = this.$t("common.required");
         isValid = false;
       }
 
-      if (!this.triggerForm.webhookUrl) {
-        this.triggerFormErrors.webhookUrl = this.$t("common.required");
+      if (!this.triggerForm.webhook_url) {
+        this.triggerFormErrors.webhook_url = this.$t("common.required");
         isValid = false;
       } else {
         try {
-          new URL(this.triggerForm.webhookUrl);
+          new URL(this.triggerForm.webhook_url);
         } catch {
-          this.triggerFormErrors.webhookUrl = "Invalid URL format";
+          this.triggerFormErrors.webhook_url = "Invalid URL format";
           isValid = false;
         }
       }
@@ -284,41 +296,19 @@ export default {
     async loadTriggers() {
       this.componentLoading.triggers = true;
       
-      const taskAction = "get-scheduled-triggers";
-      const eventId = this.getUuid();
-
-      this.$root.$once(
-        `${taskAction}-aborted-${eventId}`,
-        this.loadTriggersAborted
-      );
-
-      this.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.loadTriggersCompleted
-      );
-
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          extra: {
-            title: this.$t("action." + taskAction),
-            isNotificationHidden: true,
-            eventId,
-          },
-        })
-      );      const err = res[0];
-
-      if (err) {
+      try {
+        const response = await fetch('/api/configs');
+        const data = await response.json();
+        this.triggers = data.configs || [];
+      } catch (error) {
+        console.error('Failed to load triggers:', error);
+        this.createErrorNotificationForApp(
+          error,
+          this.$t("Failed to load scheduled triggers")
+        );
+      } finally {
         this.componentLoading.triggers = false;
-        return;
       }
-    },
-    loadTriggersAborted() {
-      this.componentLoading.triggers = false;
-    },
-    loadTriggersCompleted(taskContext, taskResult) {
-      this.triggers = taskResult.output.triggers || [];
-      this.componentLoading.triggers = false;
     },
     closeModal() {
       this.showAddModal = false;
@@ -341,140 +331,99 @@ export default {
 
       this.componentLoading.saveOperation = true;
       
-      const taskAction = this.showEditModal ? "update-scheduled-trigger" : "create-scheduled-trigger";
-      const eventId = this.getUuid();
-      
-      const data = {
-        ...this.triggerForm,
-      };
-      
-      if (this.showEditModal) {
-        data.id = this.editingTrigger.id;
-      }
-
-      this.$root.$once(
-        `${taskAction}-aborted-${eventId}`,
-        this.saveTriggerAborted
-      );
-
-      this.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.saveTriggerCompleted
-      );
-
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          data,
-          extra: {
-            title: this.$t("action." + taskAction),
-            eventId,
+      try {
+        const response = await fetch('/api/configs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-        })
-      );      const err = res[0];
-
-      if (err) {
+          body: JSON.stringify(this.triggerForm),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        this.createSuccessNotificationForApp(
+          this.$t("Scheduled trigger saved successfully")
+        );
+        
+        this.closeModal();
+        await this.loadTriggers();
+        
+      } catch (error) {
+        console.error('Failed to save trigger:', error);
+        this.createErrorNotificationForApp(
+          error,
+          this.$t("Failed to save scheduled trigger")
+        );
+      } finally {
         this.componentLoading.saveOperation = false;
-        return;
       }
-    },
-    saveTriggerAborted() {
-      this.componentLoading.saveOperation = false;
-    },
-    saveTriggerCompleted() {
-      this.componentLoading.saveOperation = false;
-      this.closeModal();
-      this.loadTriggers();
-      this.createSuccessNotificationForApp(
-        this.$t("mail_webhooks.trigger_saved")
-      );
-    },
-    async confirmDeleteTrigger() {
-      this.componentLoading.deleteOperation = true;
-      
-      const taskAction = "delete-scheduled-trigger";
-      const eventId = this.getUuid();
-
-      this.$root.$once(
-        `${taskAction}-aborted-${eventId}`,
-        this.deleteTriggerAborted
-      );
-
-      this.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.deleteTriggerCompleted
-      );
-
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          data: { id: this.deletingTrigger.id },
-          extra: {
-            title: this.$t("action." + taskAction),
-            eventId,
-          },
-        })
-      );      const err = res[0];
-
-      if (err) {
-        this.componentLoading.deleteOperation = false;
-        return;
-      }
-    },
-    deleteTriggerAborted() {
-      this.componentLoading.deleteOperation = false;
-    },
-    deleteTriggerCompleted() {
-      this.componentLoading.deleteOperation = false;
-      this.showDeleteModal = false;
-      this.deletingTrigger = null;
-      this.loadTriggers();
-      this.createSuccessNotificationForApp(
-        this.$t("mail_webhooks.trigger_deleted")
-      );
     },
     async toggleTriggerStatus(trigger) {
       this.componentLoading.toggleStatus = true;
       
-      const newStatus = trigger.status === "active" ? "inactive" : "active";
-      const taskAction = "update-scheduled-trigger";
-      const eventId = this.getUuid();
-
-      this.$root.$once(
-        `${taskAction}-aborted-${eventId}`,
-        this.toggleStatusAborted
-      );
-
-      this.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.toggleStatusCompleted
-      );
-
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,        data: {
-          id: trigger.id,
-          status: newStatus,
-        },
-          extra: {
-            title: this.$t("action." + taskAction),
-            isNotificationHidden: true,
-            eventId,
+      try {
+        const updatedTrigger = {
+          ...trigger,
+          is_active: !trigger.is_active
+        };
+        
+        const response = await fetch('/api/configs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-        })
-      );      const err = res[0];
-
-      if (err) {
+          body: JSON.stringify(updatedTrigger),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        await this.loadTriggers();
+        
+      } catch (error) {
+        console.error('Failed to toggle trigger status:', error);
+        this.createErrorNotificationForApp(
+          error,
+          this.$t("Failed to update trigger status")
+        );
+      } finally {
         this.componentLoading.toggleStatus = false;
-        return;
       }
     },
-    toggleStatusAborted() {
-      this.componentLoading.toggleStatus = false;
-    },
-    toggleStatusCompleted() {
-      this.componentLoading.toggleStatus = false;
-      this.loadTriggers();
+    async confirmDelete() {
+      this.componentLoading.deleteOperation = true;
+      
+      try {
+        const response = await fetch(`/api/configs/${this.deletingTrigger.id}`, {
+          method: 'DELETE',
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        this.createSuccessNotificationForApp(
+          this.$t("Scheduled trigger deleted successfully")
+        );
+        
+        this.showDeleteModal = false;
+        this.deletingTrigger = null;
+        await this.loadTriggers();
+        
+      } catch (error) {
+        console.error('Failed to delete trigger:', error);
+        this.createErrorNotificationForApp(
+          error,
+          this.$t("Failed to delete scheduled trigger")
+        );      } finally {
+        this.componentLoading.deleteOperation = false;
+      }
     },
   },
 };

@@ -13,9 +13,21 @@ import os
 
 request = json.load(sys.stdin)
 
-# TODO: do something with the request payload. For example configure a
-# custom route in our web router. Here the path is hardcoded as
-# 'mail-webhooks'.
+# Create state directory structure if it doesn't exist
+os.makedirs('state/data', exist_ok=True)
+
+# Configure environment variables for the service
+with open('state/environment', 'w') as f:
+    f.write(f'MAIL_WEBHOOK_IMAGE={os.environ.get("MAIL_WEBHOOK_IMAGE", "ghcr.io/nethserver/mail-webhook:latest")}\n')
+    f.write(f'TCP_PORT={os.environ["TCP_PORT"]}\n')
+    f.write(f'MODULE_ID={os.environ["MODULE_ID"]}\n')
+    f.write(f'DATABASE_PATH=/var/lib/nethserver/mail-webhook/webhooks.db\n')
+    f.write(f'LOG_LEVEL=INFO\n')
+    f.write(f'CHECK_INTERVAL=60\n')
+    f.write(f'MAIL_SERVER=localhost\n')
+    f.write(f'MAIL_PORT=993\n')
+    f.write(f'MAIL_ADMIN_USER=admin\n')
+    f.write(f'MAIL_ADMIN_PASS=\n')
 
 # Configure Traefik to route "/mail-webhooks" path requests to the mail-webhooks service
 response = agent.tasks.run(
@@ -30,5 +42,6 @@ response = agent.tasks.run(
     },
 )
 
-# Check if traefik configuration has been successfull
+# Check if traefik configuration has been successful
+agent.assert_exp(response['exit_code'] == 0)
 agent.assert_exp(response['exit_code'] == 0)

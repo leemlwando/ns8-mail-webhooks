@@ -97,11 +97,49 @@
               name: instanceLabel || instanceName,
             })
           "
-          :buttonLabel="core.$t('system_logs.card_button_label')"
-          :router="core.$router"
+          :buttonLabel="core.$t('system_logs.card_button_label')"          :router="core.$router"
           context="module"
           :moduleId="instanceName"
           light
+        />
+      </cv-column>
+      <cv-column :md="4" :max="4">
+        <NsInfoCard
+          light
+          :title="backendHealthTitle"
+          :description="$t('status.backend_health')"
+          :icon="Application32"
+          :loading="loading.backendHealth"
+          :iconStyle="backendHealthIconStyle"
+          class="min-height-card"
+        />
+      </cv-column>
+      <cv-column :md="4" :max="4">
+        <NsInfoCard
+          light
+          :title="backendStatsTitle"
+          :description="$t('status.backend_stats')"
+          :icon="Chip32"
+          :loading="loading.backendStats"
+          class="min-height-card"
+        />
+      </cv-column>
+    </cv-row>
+    <cv-row v-if="error.backendHealth || error.backendStats">
+      <cv-column v-if="error.backendHealth">
+        <NsInlineNotification
+          kind="error"
+          :title="$t('status.backend_health')"
+          :description="error.backendHealth"
+          :showCloseButton="false"
+        />
+      </cv-column>
+      <cv-column v-if="error.backendStats">
+        <NsInlineNotification
+          kind="error"
+          :title="$t('status.backend_stats')"
+          :description="error.backendStats"
+          :showCloseButton="false"
         />
       </cv-column>
     </cv-row>
@@ -257,6 +295,7 @@
 <script>
 import to from "await-to-js";
 import { mapState } from "vuex";
+import axios from "axios";
 import {
   QueryParamService,
   TaskService,
@@ -290,18 +329,23 @@ export default {
         services: [],
         images: [],
         volumes: [],
-      },
-      backupRepositories: [],
+      },      backupRepositories: [],
       backups: [],
+      backendHealth: null,
+      backendStats: null,
       loading: {
         getStatus: false,
         listBackupRepositories: false,
         listBackups: false,
+        backendHealth: false,
+        backendStats: false,
       },
       error: {
         getStatus: "",
         listBackupRepositories: "",
         listBackups: "",
+        backendHealth: "",
+        backendStats: "",
       },
     };
   },
@@ -317,13 +361,31 @@ export default {
       } else {
         return "-";
       }
-    },
-    installationNodeTitleTooltip() {
+    },    installationNodeTitleTooltip() {
       if (this.status && this.status.node_ui_name) {
         return this.$t("status.node") + " " + this.status.node;
       } else {
         return "";
       }
+    },
+    backendHealthTitle() {
+      if (this.backendHealth) {
+        return this.backendHealth.status === 'ok' ? 'Healthy' : 'Unhealthy';
+      }
+      return '-';
+    },
+    backendHealthIconStyle() {
+      if (this.backendHealth) {
+        return this.backendHealth.status === 'ok' ? 'color: #24a148' : 'color: #da1e28';
+      }
+      return '';
+    },
+    backendStatsTitle() {
+      if (this.backendStats) {
+        const total = this.backendStats.total_jobs || 0;
+        return `${total} ${total === 1 ? 'job' : 'jobs'}`;
+      }
+      return '-';
     },
   },
   beforeRouteEnter(to, from, next) {
@@ -344,10 +406,11 @@ export default {
   },
   beforeUnmount() {
     clearTimeout(this.redirectTimeout);
-  },
-  created() {
+  },  created() {
     this.getStatus();
     this.listBackupRepositories();
+    this.getBackendHealth();
+    this.getBackendStats();
   },
   methods: {
     async getStatus() {
@@ -501,9 +564,34 @@ export default {
         if (repo) {
           backup.repoName = repo.name;
         }
-      }
-      this.backups = backups;
+      }      this.backups = backups;
       this.loading.listBackups = false;
+    },
+    async getBackendHealth() {
+      this.loading.backendHealth = true;
+      this.error.backendHealth = "";
+      
+      try {
+        const res = await axios.get('/api/health');
+        this.backendHealth = res.data;
+      } catch (error) {
+        this.error.backendHealth = error.response?.data?.detail || error.message || "Failed to get backend health";
+      }
+      
+      this.loading.backendHealth = false;
+    },
+    async getBackendStats() {
+      this.loading.backendStats = true;
+      this.error.backendStats = "";
+      
+      try {
+        const res = await axios.get('/api/stats');
+        this.backendStats = res.data;
+      } catch (error) {
+        this.error.backendStats = error.response?.data?.detail || error.message || "Failed to get backend stats";
+      }
+      
+      this.loading.backendStats = false;
     },
   },
 };
