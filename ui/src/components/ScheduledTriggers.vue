@@ -21,13 +21,13 @@
         v-if="triggers.length > 0"
         :columns="tableColumns"
         :data="triggers"
-        :loading="loading.triggers"
+        :loading="componentLoading.triggers"
       >
         <template v-slot:cell:status="{ cell, row }">
           <cv-toggle
             :value="cell.value === 'active'"
             @change="toggleTriggerStatus(row)"
-            :disabled="loading.toggleStatus"
+            :disabled="componentLoading.toggleStatus"
             small
           >
             <template v-slot:text-left>{{ $t("common.inactive") }}</template>
@@ -65,8 +65,7 @@
     <!-- Add/Edit Trigger Modal -->
     <cv-modal
       :visible="showAddModal || showEditModal"
-      @modal-hide-request="closeModal"
-      :primary-button-disabled="!isFormValid || loading.saveOperation"
+      @modal-hide-request="closeModal"        :primary-button-disabled="!isFormValid || componentLoading.saveOperation"
       size="default"
     >
       <template v-slot:title>
@@ -159,7 +158,7 @@
           kind="primary"
           @click="saveTrigger"
           :disabled="!isFormValid"
-          :loading="loading.saveOperation"
+          :loading="componentLoading.saveOperation"
         >
           {{ $t("common.save") }}
         </cv-button>
@@ -183,7 +182,7 @@
         <cv-button
           kind="danger"
           @click="confirmDeleteTrigger"
-          :loading="loading.deleteOperation"
+          :loading="componentLoading.deleteOperation"
         >
           {{ $t("common.delete") }}
         </cv-button>
@@ -214,12 +213,11 @@ export default {
       triggers: [],
       showAddModal: false,
       showEditModal: false,
-      showDeleteModal: false,
-      editingTrigger: null,
+      showDeleteModal: false,      editingTrigger: null,
       deletingTrigger: null,
       triggerForm: this.getEmptyTriggerForm(),
       triggerFormErrors: {},
-      loading: {
+      componentLoading: {
         triggers: true,
         saveOperation: false,
         deleteOperation: false,
@@ -284,7 +282,7 @@ export default {
       return isValid;
     },
     async loadTriggers() {
-      this.loading.triggers = true;
+      this.componentLoading.triggers = true;
       
       const taskAction = "get-scheduled-triggers";
       const eventId = this.getUuid();
@@ -308,22 +306,19 @@ export default {
             eventId,
           },
         })
-      );
-      const err = res[0];
+      );      const err = res[0];
 
       if (err) {
-        console.error(`error creating task ${taskAction}`, err);
-        this.loading.triggers = false;
+        this.componentLoading.triggers = false;
         return;
       }
     },
-    loadTriggersAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
-      this.loading.triggers = false;
+    loadTriggersAborted() {
+      this.componentLoading.triggers = false;
     },
     loadTriggersCompleted(taskContext, taskResult) {
       this.triggers = taskResult.output.triggers || [];
-      this.loading.triggers = false;
+      this.componentLoading.triggers = false;
     },
     closeModal() {
       this.showAddModal = false;
@@ -344,7 +339,7 @@ export default {
     async saveTrigger() {
       if (!this.validateForm()) return;
 
-      this.loading.saveOperation = true;
+      this.componentLoading.saveOperation = true;
       
       const taskAction = this.showEditModal ? "update-scheduled-trigger" : "create-scheduled-trigger";
       const eventId = this.getUuid();
@@ -376,27 +371,26 @@ export default {
             eventId,
           },
         })
-      );
-      const err = res[0];
+      );      const err = res[0];
 
       if (err) {
-        console.error(`error creating task ${taskAction}`, err);
-        this.loading.saveOperation = false;
+        this.componentLoading.saveOperation = false;
         return;
       }
     },
-    saveTriggerAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
-      this.loading.saveOperation = false;
+    saveTriggerAborted() {
+      this.componentLoading.saveOperation = false;
     },
     saveTriggerCompleted() {
-      this.loading.saveOperation = false;
+      this.componentLoading.saveOperation = false;
       this.closeModal();
       this.loadTriggers();
-      this.createSuccessNotificationForApp(this.$t("mail_webhooks.trigger_saved"));
+      this.createSuccessNotificationForApp(
+        this.$t("mail_webhooks.trigger_saved")
+      );
     },
     async confirmDeleteTrigger() {
-      this.loading.deleteOperation = true;
+      this.componentLoading.deleteOperation = true;
       
       const taskAction = "delete-scheduled-trigger";
       const eventId = this.getUuid();
@@ -420,28 +414,27 @@ export default {
             eventId,
           },
         })
-      );
-      const err = res[0];
+      );      const err = res[0];
 
       if (err) {
-        console.error(`error creating task ${taskAction}`, err);
-        this.loading.deleteOperation = false;
+        this.componentLoading.deleteOperation = false;
         return;
       }
     },
-    deleteTriggerAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
-      this.loading.deleteOperation = false;
+    deleteTriggerAborted() {
+      this.componentLoading.deleteOperation = false;
     },
     deleteTriggerCompleted() {
-      this.loading.deleteOperation = false;
+      this.componentLoading.deleteOperation = false;
       this.showDeleteModal = false;
       this.deletingTrigger = null;
       this.loadTriggers();
-      this.createSuccessNotificationForApp(this.$t("mail_webhooks.trigger_deleted"));
+      this.createSuccessNotificationForApp(
+        this.$t("mail_webhooks.trigger_deleted")
+      );
     },
     async toggleTriggerStatus(trigger) {
-      this.loading.toggleStatus = true;
+      this.componentLoading.toggleStatus = true;
       
       const newStatus = trigger.status === "active" ? "inactive" : "active";
       const taskAction = "update-scheduled-trigger";
@@ -459,32 +452,28 @@ export default {
 
       const res = await to(
         this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          data: { 
-            id: trigger.id,
-            status: newStatus,
-          },
+          action: taskAction,        data: {
+          id: trigger.id,
+          status: newStatus,
+        },
           extra: {
             title: this.$t("action." + taskAction),
             isNotificationHidden: true,
             eventId,
           },
         })
-      );
-      const err = res[0];
+      );      const err = res[0];
 
       if (err) {
-        console.error(`error creating task ${taskAction}`, err);
-        this.loading.toggleStatus = false;
+        this.componentLoading.toggleStatus = false;
         return;
       }
     },
-    toggleStatusAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
-      this.loading.toggleStatus = false;
+    toggleStatusAborted() {
+      this.componentLoading.toggleStatus = false;
     },
     toggleStatusCompleted() {
-      this.loading.toggleStatus = false;
+      this.componentLoading.toggleStatus = false;
       this.loadTriggers();
     },
   },
@@ -500,7 +489,7 @@ export default {
 
 .description-section {
   margin-bottom: 1rem;
-  
+
   p {
     color: #6f6f6f;
     margin: 0;
@@ -514,12 +503,12 @@ export default {
 .empty-state {
   text-align: center;
   padding: 2rem;
-  
+
   .empty-state-content {
     h4 {
       margin-bottom: 0.75rem;
     }
-    
+
     p {
       color: #6f6f6f;
       margin-bottom: 1rem;
