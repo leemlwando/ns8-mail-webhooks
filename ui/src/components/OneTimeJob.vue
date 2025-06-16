@@ -80,40 +80,41 @@
           kind="primary"
           type="submit"
           :disabled="!isFormValid || jobRunning"
-          :loading="jobRunning"
-        >
-          {{ 
-            jobRunning 
-              ? $t("mail_webhooks.job_running") 
-              : $t("mail_webhooks.run_now") 
+          :loading="jobRunning"        >
+          {{
+            jobRunning
+              ? $t("mail_webhooks.job_running")
+              : $t("mail_webhooks.run_now")
           }}
         </cv-button>
       </div>
     </cv-form>
 
-    <!-- Job Status Section -->
-    <div v-if="jobStatus" class="job-status-section">
+    <!-- Job Status Section -->    <div v-if="jobStatus" class="job-status-section">
       <cv-tile :class="jobStatusClass">
-        <div class="job-status-content">            <div class="job-status-header">
-              <h4>{{ jobStatusTitle }}</h4>
-              <div v-if="jobRunning" class="job-progress">
-                <cv-progress-bar
-                  :value="jobProgress"
-                  :max="100"
-                  :label="jobProgressLabel"
-                />
-              </div>
+        <div class="job-status-content">
+          <div class="job-status-header">
+            <h4>{{ jobStatusTitle }}</h4>
+            <div v-if="jobRunning" class="job-progress">
+              <cv-progress-bar
+                :value="jobProgress"
+                :max="100"
+                :label="jobProgressLabel"
+              />
             </div>
-          
-          <div v-if="jobStatus.details" class="job-details">            <p>
+          </div>
+
+          <div v-if="jobStatus.details" class="job-details">
+            <p>
               <strong>{{ $t("mail_webhooks.mailbox") }}:</strong>
               {{ jobStatus.mailbox }}
-            </p>
-            <p>
+            </p>            <p>
               <strong>{{ $t("mail_webhooks.webhook_url") }}:</strong>
               {{ jobStatus.webhookUrl }}
-            </p>            <p v-if="jobStatus.emailsProcessed !== undefined">
-              <strong>Emails processed:</strong> {{ jobStatus.emailsProcessed }}
+            </p>
+            <p v-if="jobStatus.emailsProcessed !== undefined">
+              <strong>Emails processed:</strong>
+              {{ jobStatus.emailsProcessed }}
             </p>
             <p v-if="jobStatus.startTime">
               <strong>Started:</strong>
@@ -126,8 +127,13 @@
           </div>
 
           <div v-if="jobStatus.error" class="job-error">
-            <p><strong>Error:</strong> {{ jobStatus.error }}</p>
-          </div>          <div
+            <p>
+              <strong>Error:</strong>
+              {{ jobStatus.error }}
+            </p>
+          </div>
+
+          <div
             v-if="jobStatus.logs && jobStatus.logs.length > 0"
             class="job-logs"
           >
@@ -163,8 +169,8 @@
         <p>{{ $t("mail_webhooks.confirm_delete_destructive") }}</p>
       </template>
       <template v-slot:secondary-button>{{ $t("common.cancel") }}</template>
-      <template v-slot:primary-button>{{ $t("common.yes") }}</template>
-      <template v-slot:primary-button-action>        <cv-button kind="danger" @click="confirmRunJob">
+      <template v-slot:primary-button>{{ $t("common.yes") }}</template>      <template v-slot:primary-button-action>
+        <cv-button kind="danger" @click="confirmRunJob">
           {{ $t("common.yes") }}
         </cv-button>
       </template>
@@ -288,20 +294,21 @@ export default {
       }
 
       this.confirmRunJob();
-    },
-    async confirmRunJob() {
-      this.showDestructiveWarning = false;      this.jobRunning = true;
+    },    async confirmRunJob() {
+      this.showDestructiveWarning = false;
+      this.jobRunning = true;
       this.jobStatus = null;
       this.jobProgress = 0;
-      
+
       const taskAction = "run-one-time-job";
-      const eventId = this.getUuid();      this.$root.$once(
-        `${taskAction}-aborted-${eventId}`,
-        this.runJobAborted
-      );
+      const eventId = this.getUuid();
+
+      this.$root.$once(`${taskAction}-aborted-${eventId}`, this.runJobAborted);
 
       this.$root.$once(
         `${taskAction}-completed-${eventId}`,
+        this.runJobCompleted
+      );
         this.runJobCompleted
       );
 
@@ -314,9 +321,9 @@ export default {
           extra: {
             title: this.$t("action." + taskAction),
             eventId,
-          },
-        })
-      );      const err = res[0];
+          },        })
+      );
+      const err = res[0];
 
       if (err) {
         this.jobRunning = false;
@@ -325,12 +332,13 @@ export default {
           this.$t("mail_webhooks.error_running_job")
         );
         return;
-      }      // Start polling for job status
+      }
+
+      // Start polling for job status
       this.startJobStatusPolling();
     },
-    runJobAborted() {
-      this.jobRunning = false;
-      this.jobStatus = {
+    runJobAborted(taskResult) {
+      this.jobRunning = false;      this.jobStatus = {
         status: "failed",
         error: taskResult.error || "Job was aborted",
         details: this.jobForm,
@@ -346,14 +354,15 @@ export default {
           emailsProcessed: taskResult.output.emailsProcessed,
           startTime: taskResult.output.startTime,
           endTime: taskResult.output.endTime,
-        },
-        logs: taskResult.output.logs || [],
-      };      this.jobProgress = 100;
+        },        logs: taskResult.output.logs || [],
+      };
+      this.jobProgress = 100;
       this.stopJobStatusPolling();
       this.createSuccessNotificationForApp(
         this.$t("mail_webhooks.job_started")
       );
-    },    startJobStatusPolling() {
+    },
+    startJobStatusPolling() {
       // Poll every 2 seconds for job progress
       this.jobStatusPollingInterval = setInterval(async () => {
         await this.pollJobStatus();
@@ -364,7 +373,8 @@ export default {
         clearInterval(this.jobStatusPollingInterval);
         this.jobStatusPollingInterval = null;
       }
-    },    async pollJobStatus() {
+    },
+    async pollJobStatus() {
       // This would call an API to get the current job status
       // For now, we'll simulate progress
       if (this.jobRunning && this.jobProgress < 90) {
@@ -393,7 +403,7 @@ export default {
 
 .description-section {
   margin-bottom: 1rem;
-  
+
   p {
     color: #6f6f6f;
     margin: 0;
@@ -407,9 +417,8 @@ export default {
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  
+  gap: 1rem;  margin-bottom: 1rem;
+
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
   }
