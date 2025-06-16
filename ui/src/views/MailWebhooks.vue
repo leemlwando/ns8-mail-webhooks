@@ -3,9 +3,9 @@
   SPDX-License-Identifier: GPL-3.0-or-later
 -->
 <template>
-  <div>
+  <div class="mail-webhooks-container">
     <AppLoader v-if="loading.page" />
-    <div v-else>
+    <div v-else class="mail-webhooks-content">
       <div class="page-title">
         <h2>{{ $t("mail_webhooks.title") }}</h2>
       </div>
@@ -120,6 +120,18 @@ export default {
 
 <style scoped lang="scss">
 @import "@/styles/carbon-utils";
+
+.mail-webhooks-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.mail-webhooks-content {
+  padding: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+}
 
 .page-title {
   margin-bottom: 1rem;

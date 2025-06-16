@@ -1,5 +1,4 @@
-{
-    "common": {
+{    "common": {
         "required": "Required",
         "work_in_progress": "Work in progress",
         "processing": "Processing...",
@@ -16,7 +15,8 @@
         "inactive": "Inactive",
         "name": "Name",
         "description": "Description",
-        "actions": "Actions"
+        "actions": "Actions",
+        "never": "Never"
     },
     "status": {
         "title": "Status",
@@ -85,20 +85,72 @@
         "trigger_saved": "Scheduled trigger saved successfully",
         "trigger_deleted": "Scheduled trigger deleted successfully",
         "job_started": "One-time job started successfully"
-    },
-    "settings": {
+    },    "settings": {
         "title": "Settings",
+        "description": "Configure module settings and preferences",
         "configure_instance": "Configure {instance}",
         "save": "Save",
-        "test_field": "Test field"
+        "test_field": "Test field",
+        "mail_server_config": "Mail Server Configuration",
+        "mail_server_description": "Configure the IMAP connection settings for accessing mailboxes",
+        "imap_host": "IMAP Host",
+        "imap_host_placeholder": "mail.example.com",
+        "imap_port": "IMAP Port",
+        "use_ssl": "Use SSL/TLS",
+        "default_username": "Default Username",
+        "default_username_placeholder": "user@example.com",
+        "default_username_help": "Default username for mailbox authentication",
+        "security_settings": "Security Settings",
+        "security_description": "Configure security and authentication settings",
+        "default_api_key": "Default API Key",
+        "default_api_key_placeholder": "Enter default API key",
+        "default_api_key_help": "Default API key used for webhook authentication when not specified",
+        "webhook_timeout": "Webhook Timeout (seconds)",
+        "webhook_timeout_help": "Maximum time to wait for webhook responses",
+        "max_retries": "Maximum Retries",
+        "max_retries_help": "Number of retry attempts for failed webhook calls",
+        "validate_ssl_certificates": "Validate SSL Certificates",
+        "performance_settings": "Performance Settings",
+        "performance_description": "Configure performance and resource usage settings",
+        "max_emails_per_batch": "Max Emails Per Batch",
+        "max_emails_per_batch_help": "Maximum number of emails to process in a single batch",
+        "batch_processing_delay": "Batch Processing Delay (ms)",
+        "batch_processing_delay_help": "Delay between processing batches",
+        "connection_pool_size": "Connection Pool Size",
+        "connection_pool_size_help": "Number of concurrent IMAP connections",
+        "logging_config": "Logging Configuration",
+        "logging_description": "Configure logging levels and retention",
+        "log_level": "Log Level",
+        "log_retention_days": "Log Retention (days)",
+        "log_retention_help": "Number of days to keep log files",
+        "max_log_file_size": "Max Log File Size (MB)",
+        "max_log_file_size_help": "Maximum size of individual log files",
+        "enable_verbose_logging": "Enable Verbose Logging",
+        "module_info": "Module Information",
+        "module_info_description": "View module status and diagnostic information",
+        "module_version": "Module Version",
+        "module_status": "Module Status",
+        "last_updated": "Last Updated",
+        "active_triggers": "Active Triggers",
+        "run_diagnostics": "Run Diagnostics",
+        "export_logs": "Export Logs",
+        "save_configuration": "Save Configuration",
+        "reset_to_defaults": "Reset to Defaults",
+        "configuration_error": "Configuration Error",
+        "configuration_saved": "Configuration saved successfully",
+        "save_error": "Failed to save configuration",
+        "diagnostics_success": "Diagnostics completed successfully",
+        "diagnostics_error": "Diagnostics failed",
+        "logs_exported": "Logs exported successfully",
+        "export_error": "Failed to export logs",
+        "invalid_port": "Port must be between 1 and 65535"
     },
     "about": {
         "title": "About"
     },
     "task": {
         "cannot_create_task": "Cannot create task {action}"
-    },
-    "action": {
+    },    "action": {
         "get-status": "Get status",
         "get-configuration": "Get configuration",
         "configure-module": "Configure module",
@@ -112,7 +164,9 @@
         "create-scheduled-trigger": "Create scheduled trigger",
         "update-scheduled-trigger": "Update scheduled trigger",
         "delete-scheduled-trigger": "Delete scheduled trigger",
-        "run-one-time-job": "Run one-time job"
+        "run-one-time-job": "Run one-time job",
+        "run-diagnostics": "Run diagnostics",
+        "export-logs": "Export logs"
     },
     "error": {
         "error": "Error",

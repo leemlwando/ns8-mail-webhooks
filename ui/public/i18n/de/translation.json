@@ -1,5 +1,4 @@
-{
-    "common": {
+{    "common": {
         "required": "Erforderlich",
         "work_in_progress": "In Bearbeitung",
         "processing": "Verarbeitung läuft...",
@@ -16,7 +15,8 @@
         "inactive": "Inaktiv",
         "name": "Name",
         "description": "Beschreibung",
-        "actions": "Aktionen"
+        "actions": "Aktionen",
+        "never": "Niemals"
     },
     "status": {
         "title": "Status",
@@ -85,12 +85,64 @@
         "trigger_saved": "Geplanter Auslöser erfolgreich gespeichert",
         "trigger_deleted": "Geplanter Auslöser erfolgreich gelöscht",
         "job_started": "Einmaliger Job erfolgreich gestartet"
-    },
-    "settings": {
+    },    "settings": {
         "title": "Einstellungen",
+        "description": "Moduleinstellungen und Präferenzen konfigurieren",
         "configure_instance": "{instance} konfigurieren",
         "save": "Speichern",
-        "test_field": "Testfeld"
+        "test_field": "Testfeld",
+        "mail_server_config": "E-Mail-Server-Konfiguration",
+        "mail_server_description": "IMAP-Verbindungseinstellungen für den Zugriff auf Postfächer konfigurieren",
+        "imap_host": "IMAP-Host",
+        "imap_host_placeholder": "mail.example.com",
+        "imap_port": "IMAP-Port",
+        "use_ssl": "SSL/TLS verwenden",
+        "default_username": "Standard-Benutzername",
+        "default_username_placeholder": "user@example.com",
+        "default_username_help": "Standard-Benutzername für Postfach-Authentifizierung",
+        "security_settings": "Sicherheitseinstellungen",
+        "security_description": "Sicherheits- und Authentifizierungseinstellungen konfigurieren",
+        "default_api_key": "Standard-API-Schlüssel",
+        "default_api_key_placeholder": "Standard-API-Schlüssel eingeben",
+        "default_api_key_help": "Standard-API-Schlüssel für Webhook-Authentifizierung, wenn nicht angegeben",
+        "webhook_timeout": "Webhook-Timeout (Sekunden)",
+        "webhook_timeout_help": "Maximale Wartezeit für Webhook-Antworten",
+        "max_retries": "Maximale Wiederholungen",
+        "max_retries_help": "Anzahl der Wiederholungsversuche für fehlgeschlagene Webhook-Aufrufe",
+        "validate_ssl_certificates": "SSL-Zertifikate validieren",
+        "performance_settings": "Leistungseinstellungen",
+        "performance_description": "Leistungs- und Ressourcenverbrauchseinstellungen konfigurieren",
+        "max_emails_per_batch": "Max. E-Mails pro Batch",
+        "max_emails_per_batch_help": "Maximale Anzahl von E-Mails, die in einem Batch verarbeitet werden",
+        "batch_processing_delay": "Batch-Verarbeitungsverzögerung (ms)",
+        "batch_processing_delay_help": "Verzögerung zwischen der Verarbeitung von Batches",
+        "connection_pool_size": "Verbindungspool-Größe",
+        "connection_pool_size_help": "Anzahl gleichzeitiger IMAP-Verbindungen",
+        "logging_config": "Protokollierungskonfiguration",
+        "logging_description": "Protokollierungsebenen und -aufbewahrung konfigurieren",
+        "log_level": "Protokollierungsebene",
+        "log_retention_days": "Protokollaufbewahrung (Tage)",
+        "log_retention_help": "Anzahl der Tage, die Protokolldateien aufbewahrt werden",
+        "max_log_file_size": "Max. Protokolldateigröße (MB)",
+        "max_log_file_size_help": "Maximale Größe einzelner Protokolldateien",
+        "enable_verbose_logging": "Ausführliche Protokollierung aktivieren",
+        "module_info": "Modulinformationen",
+        "module_info_description": "Modulstatus und Diagnoseinformationen anzeigen",
+        "module_version": "Modulversion",
+        "module_status": "Modulstatus",
+        "last_updated": "Zuletzt aktualisiert",
+        "active_triggers": "Aktive Auslöser",
+        "run_diagnostics": "Diagnose ausführen",
+        "export_logs": "Protokolle exportieren",
+        "save_configuration": "Konfiguration speichern",
+        "reset_to_defaults": "Auf Standardwerte zurücksetzen",
+        "configuration_error": "Konfigurationsfehler",
+        "configuration_saved": "Konfiguration erfolgreich gespeichert",
+        "save_error": "Fehler beim Speichern der Konfiguration",
+        "diagnostics_success": "Diagnose erfolgreich abgeschlossen",
+        "diagnostics_error": "Diagnose fehlgeschlagen",
+        "logs_exported": "Protokolle erfolgreich exportiert",
+        "export_error": "Fehler beim Exportieren der Protokolle",        "invalid_port": "Port muss zwischen 1 und 65535 liegen"
     },
     "about": {
         "title": "Über"
@@ -112,7 +164,9 @@
         "create-scheduled-trigger": "Geplanten Auslöser erstellen",
         "update-scheduled-trigger": "Geplanten Auslöser aktualisieren",
         "delete-scheduled-trigger": "Geplanten Auslöser löschen",
-        "run-one-time-job": "Einmaligen Job ausführen"
+        "run-one-time-job": "Einmaligen Job ausführen",
+        "run-diagnostics": "Diagnose ausführen",
+        "export-logs": "Protokolle exportieren"
     },
     "error": {
         "error": "Fehler",
