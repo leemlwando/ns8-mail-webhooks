@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 #
-# Copyright (C) 2023 Nethesis S.r.l.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2023 Lee M. Lwando <leemlwando@gmail.com>
+# SPDX-License-Identifier: MIT
 #
 
 import json
@@ -13,11 +13,31 @@ import os
 
 request = json.load(sys.stdin)
 
-# TODO: do something with the request payload. For example configure a
-# custom route in our web router. Here the path is hardcoded as
-# 'kickstart'.
+# Configure module-specific settings
+imap_host = request.get('imap_host', '127.0.0.1')
+imap_port = request.get('imap_port', 993)
+polling_interval = request.get('polling_interval', 60)
 
-# Configure Traefik to route "/kickstart" path requests to the kickstart service
+# Write configuration to environment file
+env_vars = {
+    'IMAP_HOST': imap_host,
+    'IMAP_PORT': str(imap_port),
+    'POLLING_INTERVAL': str(polling_interval),
+    'WEBHOOK_TIMEOUT': '30',
+    'DATABASE_URL': 'sqlite:////var/lib/nethserver/mail-webhooks/schedules.db'
+}
+
+# Write mailbox passwords from request (securely stored)
+for key, value in request.items():
+    if key.startswith('mailbox_password_'):
+        env_vars[f'MAILBOX_PASSWORD_{key[17:]}'] = value
+
+# Write environment file
+with open('environment', 'w') as f:
+    for key, value in env_vars.items():
+        f.write(f'{key}={value}\n')
+
+# Configure Traefik to route "/mail-webhooks" path requests to the mail-webhooks service
 response = agent.tasks.run(
     agent_id=agent.resolve_agent_id('traefik@node'),
     action='set-route',
@@ -26,9 +46,9 @@ response = agent.tasks.run(
         'url':  'http://127.0.0.1:' + os.environ["TCP_PORT"],
         'http2https': False,
         'lets_encrypt': False,
-        'path': '/kickstart',
+        'path': '/mail-webhooks',
     },
 )
 
-# Check if traefik configuration has been successfull
+# Check if traefik configuration has been successful
 agent.assert_exp(response['exit_code'] == 0)

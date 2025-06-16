@@ -1,10 +1,10 @@
 //
-// Copyright (C) 2023 Nethesis S.r.l.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2023 Lee M. Lwando <leemlwando@gmail.com>
+// SPDX-License-Identifier: MIT
 //
 import Vue from "vue";
 import VueRouter from "vue-router";
-import Status from "../views/Status.vue";
+import Webhooks from "../views/Webhooks.vue";
 import Settings from "../views/Settings.vue";
 
 Vue.use(VueRouter);
@@ -12,9 +12,9 @@ Vue.use(VueRouter);
 const routes = [
   {
     path: "/",
-    name: "Status",
-    component: Status,
-    alias: "/status", // important
+    name: "Webhooks",
+    component: Webhooks,
+    alias: "/webhooks", // important
   },
   {
     path: "/settings",

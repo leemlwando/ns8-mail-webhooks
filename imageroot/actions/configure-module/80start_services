@@ -1,12 +1,16 @@
 #!/bin/bash
 
 #
-# Copyright (C) 2023 Nethesis S.r.l.
-# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2023 Lee M. Lwando <leemlwando@gmail.com>
+# SPDX-License-Identifier: MIT
 #
 
 # If the control reaches this step, the service can be enabled and started
 
-touch smarthost.env
+# Ensure environment file exists
+touch environment
 
-systemctl --user enable --now kickstart.service
+# Create data directory for the module
+mkdir -p /var/lib/nethserver/mail-webhooks
+
+systemctl --user enable --now mail-webhooks.service

@@ -1,6 +1,13 @@
 {
-  "name": "ui",
-  "version": "0.1.0",
+  "name": "ns8-mail-webhooks-ui",
+  "version": "1.0.0",
+  "description": "UI for NethServer 8 Mail Webhooks module",
+  "author": "Lee M. Lwando <leemlwando@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leemlwando/ns8-mail-webhooks.git"
+  },
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
