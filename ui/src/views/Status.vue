@@ -1,6 +1,6 @@
 <!--
-  Copyright (C) 2023 Nethesis S.r.l.
-  SPDX-License-Identifier: GPL-3.0-or-later
+  Copyright (C) 2023 Lee M. Lwando <leemlwando@gmail.com>
+  SPDX-License-Identifier: MIT
 -->
 <template>
   <cv-grid fullWidth>
@@ -15,26 +15,6 @@
           kind="error"
           :title="$t('action.get-status')"
           :description="error.getStatus"
-          :showCloseButton="false"
-        />
-      </cv-column>
-    </cv-row>
-    <cv-row v-if="error.listBackupRepositories">
-      <cv-column>
-        <NsInlineNotification
-          kind="error"
-          :title="$t('action.list-backup-repositories')"
-          :description="error.listBackupRepositories"
-          :showCloseButton="false"
-        />
-      </cv-column>
-    </cv-row>
-    <cv-row v-if="error.listBackups">
-      <cv-column>
-        <NsInlineNotification
-          kind="error"
-          :title="$t('action.list-backups')"
-          :description="error.listBackups"
           :showCloseButton="false"
         />
       </cv-column>
@@ -62,34 +42,29 @@
         />
       </cv-column>
       <cv-column :md="4" :max="4">
-        <NsBackupCard
-          :title="core.$t('backup.title')"
-          :noBackupMessage="core.$t('backup.no_backup_configured')"
-          :goToBackupLabel="core.$t('backup.go_to_backup')"
-          :repositoryLabel="core.$t('backup.repository')"
-          :statusLabel="core.$t('common.status')"
-          :statusSuccessLabel="core.$t('common.success')"
-          :statusNotRunLabel="core.$t('backup.backup_has_not_run_yet')"
-          :statusErrorLabel="core.$t('error.error')"
-          :completedLabel="core.$t('backup.completed')"
-          :durationLabel="core.$t('backup.duration')"
-          :totalSizeLabel="core.$t('backup.total_size')"
-          :totalFileCountLabel="core.$t('backup.total_file_count')"
-          :backupDisabledLabel="core.$t('common.disabled')"
-          :showMoreLabel="core.$t('common.show_more')"
-          :multipleUncertainStatusLabel="
-            core.$t('backup.some_backups_failed_or_are_pending')
-          "
-          :moduleId="instanceName"
-          :moduleUiName="instanceLabel"
-          :repositories="backupRepositories"
-          :backups="backups"
-          :loading="loading.listBackupRepositories || loading.listBackups"
-          :coreContext="core"
+        <NsInfoCard
           light
+          :title="status.version || '-'"
+          :description="$t('status.module_version')"
+          :icon="Version32"
+          :loading="loading.getStatus"
+          class="min-height-card"
         />
       </cv-column>
-      <cv-column :md="4" :max="4">
+    </cv-row>
+    <cv-row>
+      <cv-column :md="6" :max="6">
+        <NsInfoCard
+          light
+          :title="schedulerStatusTitle"
+          :description="$t('status.scheduler_status')"
+          :icon="schedulerStatusIcon"
+          :iconClass="schedulerStatusIconClass"
+          :loading="loading.getStatus"
+          class="min-height-card"
+        />
+      </cv-column>
+      <cv-column :md="6" :max="6">
         <NsSystemLogsCard
           :title="core.$t('system_logs.card_title')"
           :description="
@@ -121,34 +96,54 @@
         v-else
         v-for="(service, index) in status.services"
         :key="index"
-        :md="4"
-        :max="4"
-      >
-        <NsSystemdServiceCard
+        :md="4"          :contextId="instanceName"
+          :core="core"
           light
-          class="min-height-card"
-          :serviceName="service.name"
-          :active="service.active"
-          :failed="service.failed"
-          :enabled="service.enabled"
-          :icon="Cube32"
         />
       </cv-column>
     </cv-row>
-    <cv-row v-else>
+    <!-- Processing Statistics -->
+    <cv-row>
+      <cv-column class="page-subtitle">
+        <h4>{{ $t("status.processing_statistics") }}</h4>
+      </cv-column>
+    </cv-row>
+    <cv-row>
       <cv-column :md="4" :max="4">
-        <cv-tile light>
-          <cv-skeleton-text
-            :paragraph="true"
-            :line-count="4"
-          ></cv-skeleton-text>
-        </cv-tile>
+        <NsInfoCard
+          light
+          :title="(processingStats.total_processed || 0).toString()"
+          :description="$t('status.total_emails_processed')"
+          :icon="Email32"
+          :loading="loading.getStatus"
+          class="min-height-card"
+        />
+      </cv-column>
+      <cv-column :md="4" :max="4">
+        <NsInfoCard
+          light
+          :title="(processingStats.successful || 0).toString()"
+          :description="$t('status.successful_webhooks')"
+          :icon="CheckmarkOutline32"
+          :loading="loading.getStatus"
+          class="min-height-card status-success"
+        />
+      </cv-column>
+      <cv-column :md="4" :max="4">
+        <NsInfoCard
+          light
+          :title="(processingStats.failed || 0).toString()"
+          :description="$t('status.failed_webhooks')"
+          :icon="WarningAlt32"
+          :loading="loading.getStatus"
+          class="min-height-card status-warning"
+        />
       </cv-column>
     </cv-row>
-    <!-- images -->
+    <!-- Active Schedules -->
     <cv-row>
       <cv-column class="page-subtitle">
-        <h4>{{ $tc("status.app_images", 2) }}</h4>
+        <h4>{{ $t("status.active_schedules") }}</h4>
       </cv-column>
     </cv-row>
     <cv-row>
@@ -156,89 +151,46 @@
         <cv-tile light>
           <div v-if="!loading.getStatus">
             <NsEmptyState
-              v-if="!status.images.length"
-              :title="$t('status.no_images')"
+              v-if="!activeSchedules.length"
+              :title="$t('status.no_active_schedules')"
+              :description="$t('status.no_active_schedules_description')"
             >
             </NsEmptyState>
             <cv-structured-list v-else>
               <template slot="headings">
                 <cv-structured-list-heading>{{
-                  $t("status.name")
+                  $t("status.email_address")
                 }}</cv-structured-list-heading>
                 <cv-structured-list-heading>{{
-                  $t("status.size")
+                  $t("status.webhook_url")
                 }}</cv-structured-list-heading>
                 <cv-structured-list-heading>{{
-                  $t("status.created")
+                  $t("status.last_run")
+                }}</cv-structured-list-heading>
+                <cv-structured-list-heading>{{
+                  $t("status.status")
                 }}</cv-structured-list-heading>
               </template>
               <template slot="items">
                 <cv-structured-list-item
-                  v-for="(image, index) in status.images"
+                  v-for="(schedule, index) in activeSchedules"
                   :key="index"
                 >
                   <cv-structured-list-data class="break-word">{{
-                    image.name
-                  }}</cv-structured-list-data>
-                  <cv-structured-list-data>{{
-                    image.size
+                    schedule.email_address
                   }}</cv-structured-list-data>
                   <cv-structured-list-data class="break-word">{{
-                    image.created
-                  }}</cv-structured-list-data>
-                </cv-structured-list-item>
-              </template>
-            </cv-structured-list>
-          </div>
-          <cv-skeleton-text
-            v-else
-            :paragraph="true"
-            :line-count="5"
-          ></cv-skeleton-text>
-        </cv-tile>
-      </cv-column>
-    </cv-row>
-    <!-- volumes -->
-    <cv-row>
-      <cv-column class="page-subtitle">
-        <h4>{{ $tc("status.app_volumes", 2) }}</h4>
-      </cv-column>
-    </cv-row>
-    <cv-row>
-      <cv-column>
-        <cv-tile light>
-          <div v-if="!loading.getStatus">
-            <NsEmptyState
-              v-if="!status.volumes.length"
-              :title="$t('status.no_volumes')"
-            >
-            </NsEmptyState>
-            <cv-structured-list v-else>
-              <template slot="headings">
-                <cv-structured-list-heading>{{
-                  $t("status.name")
-                }}</cv-structured-list-heading>
-                <cv-structured-list-heading>{{
-                  $t("status.mount")
-                }}</cv-structured-list-heading>
-                <cv-structured-list-heading>{{
-                  $t("status.created")
-                }}</cv-structured-list-heading>
-              </template>
-              <template slot="items">
-                <cv-structured-list-item
-                  v-for="(volume, index) in status.volumes"
-                  :key="index"
-                >
-                  <cv-structured-list-data>{{
-                    volume.name
-                  }}</cv-structured-list-data>
-                  <cv-structured-list-data class="break-word">{{
-                    volume.mount
+                    schedule.webhook_url
                   }}</cv-structured-list-data>
                   <cv-structured-list-data>{{
-                    volume.created
+                    schedule.last_run ? formatDate(schedule.last_run) : '-'
                   }}</cv-structured-list-data>
+                  <cv-structured-list-data>
+                    <cv-tag 
+                      :label="schedule.enabled ? $t('common.enabled') : $t('common.disabled')"
+                      :kind="schedule.enabled ? 'green' : 'gray'"
+                    />
+                  </cv-structured-list-data>
                 </cv-structured-list-item>
               </template>
             </cv-structured-list>
@@ -264,15 +216,32 @@ import {
   UtilService,
   PageTitleService,
 } from "@nethserver/ns8-ui-lib";
+import {
+  Application32,
+  Chip32,
+  Version32,
+  Email32,
+  CheckmarkOutline32,
+  WarningAlt32,
+} from "@carbon/icons-vue";
+import UtilMixin from "@/mixins/util.js";
 
 export default {
   name: "Status",
+  components: {
+    Application32,
+    Chip32,
+    Version32,
+    Email32,
+    CheckmarkOutline32,
+    WarningAlt32,  },
   mixins: [
     TaskService,
     QueryParamService,
     IconService,
     UtilService,
     PageTitleService,
+    UtilMixin,
   ],
   pageTitle() {
     return this.$t("status.title") + " - " + this.appName;
@@ -287,21 +256,20 @@ export default {
       redirectTimeout: 0,
       status: {
         instance: "",
-        services: [],
-        images: [],
-        volumes: [],
+        version: "",
+        scheduler_running: false,
       },
-      backupRepositories: [],
-      backups: [],
+      processingStats: {
+        total_processed: 0,
+        successful: 0,
+        failed: 0,
+      },
+      activeSchedules: [],
       loading: {
         getStatus: false,
-        listBackupRepositories: false,
-        listBackups: false,
       },
       error: {
         getStatus: "",
-        listBackupRepositories: "",
-        listBackups: "",
       },
     };
   },
@@ -325,6 +293,16 @@ export default {
         return "";
       }
     },
+    schedulerStatusTitle() {
+      return this.status.scheduler_running 
+        ? this.$t('status.scheduler_running')
+        : this.$t('status.scheduler_stopped');
+    },    schedulerStatusIcon() {
+      return this.status.scheduler_running ? CheckmarkOutline32 : WarningAlt32;
+    },
+    schedulerStatusIconClass() {
+      return this.status.scheduler_running ? 'status-success' : 'status-warning';
+    },
   },
   beforeRouteEnter(to, from, next) {
     next((vm) => {
@@ -347,163 +325,49 @@ export default {
   },
   created() {
     this.getStatus();
-    this.listBackupRepositories();
+    this.getSchedules();
+    this.getProcessingStats();
   },
   methods: {
     async getStatus() {
       this.loading.getStatus = true;
       this.error.getStatus = "";
-      const taskAction = "get-status";
-      const eventId = this.getUuid();
 
-      // register to task error
-      this.core.$root.$once(
-        `${taskAction}-aborted-${eventId}`,
-        this.getStatusAborted
-      );
-
-      // register to task completion
-      this.core.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.getStatusCompleted
-      );
-
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          extra: {
-            title: this.$t("action." + taskAction),
-            isNotificationHidden: true,
-            eventId,
-          },
-        })
-      );
-      const err = res[0];
-
-      if (err) {
-        console.error(`error creating task ${taskAction}`, err);
-        this.error.getStatus = this.getErrorMessage(err);
+      try {
+        const response = await this.axios.get(`${this.apiUrl}/api/status`);
+        this.status = response.data;
+      } catch (error) {
+        console.error('Error fetching status:', error);
+        this.error.getStatus = this.getErrorMessage(error);
+      } finally {
         this.loading.getStatus = false;
-        return;
       }
     },
-    getStatusAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
-      this.error.getStatus = this.$t("error.generic_error");
-      this.loading.getStatus = false;
-    },
-    getStatusCompleted(taskContext, taskResult) {
-      this.status = taskResult.output;
-      this.loading.getStatus = false;
-    },
-    async listBackupRepositories() {
-      this.loading.listBackupRepositories = true;
-      this.error.listBackupRepositories = "";
-      const taskAction = "list-backup-repositories";
-      const eventId = this.getUuid();
-
-      // register to task error
-      this.core.$root.$once(
-        `${taskAction}-aborted-${eventId}`,
-        this.listBackupRepositoriesAborted
-      );
-
-      // register to task completion
-      this.core.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.listBackupRepositoriesCompleted
-      );
-
-      const res = await to(
-        this.createClusterTaskForApp({
-          action: taskAction,
-          extra: {
-            title: this.$t("action." + taskAction),
-            isNotificationHidden: true,
-            eventId,
-          },
-        })
-      );
-      const err = res[0];
-
-      if (err) {
-        console.error(`error creating task ${taskAction}`, err);
-        this.error.listBackupRepositories = this.getErrorMessage(err);
-        this.loading.listBackupRepositories = false;
-        return;
+    async getSchedules() {
+      try {
+        const response = await this.axios.get(`${this.apiUrl}/api/schedules/`);
+        this.activeSchedules = response.data || [];
+      } catch (error) {
+        console.error('Error fetching schedules:', error);
       }
     },
-    listBackupRepositoriesAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
-      this.error.listBackupRepositories = this.$t("error.generic_error");
-      this.loading.listBackupRepositories = false;
-    },
-    listBackupRepositoriesCompleted(taskContext, taskResult) {
-      let backupRepositories = taskResult.output.repositories.sort(
-        this.sortByProperty("name")
-      );
-      this.backupRepositories = backupRepositories;
-      this.loading.listBackupRepositories = false;
-      this.listBackups();
-    },
-    async listBackups() {
-      this.loading.listBackups = true;
-      this.error.listBackups = "";
-      const taskAction = "list-backups";
-      const eventId = this.getUuid();
-
-      // register to task error
-      this.core.$root.$once(
-        `${taskAction}-aborted-${eventId}`,
-        this.listBackupsAborted
-      );
-
-      // register to task completion
-      this.core.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.listBackupsCompleted
-      );
-
-      const res = await to(
-        this.createClusterTaskForApp({
-          action: taskAction,
-          extra: {
-            title: this.$t("action." + taskAction),
-            isNotificationHidden: true,
-            eventId,
-          },
-        })
-      );
-      const err = res[0];
-
-      if (err) {
-        console.error(`error creating task ${taskAction}`, err);
-        this.error.listBackups = this.getErrorMessage(err);
-        this.loading.listBackups = false;
-        return;
+    async getProcessingStats() {
+      try {
+        const response = await this.axios.get(`${this.apiUrl}/api/logs/`);
+        const logs = response.data || [];
+        
+        this.processingStats = {
+          total_processed: logs.length,
+          successful: logs.filter(log => log.status === 'success').length,
+          failed: logs.filter(log => log.status === 'error').length,
+        };
+      } catch (error) {
+        console.error('Error fetching processing stats:', error);
       }
     },
-    listBackupsAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
-      this.error.listBackups = this.$t("error.generic_error");
-      this.loading.listBackups = false;
-    },
-    listBackupsCompleted(taskContext, taskResult) {
-      let backups = taskResult.output.backups;
-      backups.sort(this.sortByProperty("name"));
-
-      // get repository name
-      for (const backup of backups) {
-        const repo = this.backupRepositories.find(
-          (r) => r.id == backup.repository
-        );
-
-        if (repo) {
-          backup.repoName = repo.name;
-        }
-      }
-      this.backups = backups;
-      this.loading.listBackups = false;
+    formatDate(dateString) {
+      if (!dateString) return '-';
+      return new Date(dateString).toLocaleString();
     },
   },
 };
@@ -516,4 +380,11 @@ export default {
   word-wrap: break-word;
   max-width: 30vw;
 }
-</style>
+
+.status-success .bx--info-card__icon {
+  color: #198038;
+}
+
+.status-warning .bx--info-card__icon {
+  color: #f1c21b;
+}

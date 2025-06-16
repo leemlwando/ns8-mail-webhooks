@@ -1,19 +1,19 @@
 {
-  "name": "kickstart",
+  "name": "mail-webhooks",
   "description": {
-    "en": "My kickstart module"
+    "en": "Mail Webhooks - Process emails from mailboxes and forward to webhooks"
   },
-  "categories": [],
+  "categories": ["mail"],
   "authors": [
     {
-      "name": "Name Surname",
-      "email": "author@yourmail.org"
+      "name": "Lee M. Lwando",
+      "email": "leemlwando@gmail.com"
     }
   ],
   "docs": {
-    "documentation_url": "https://docs.kickstart.com/",
-    "bug_url": "https://github.com/NethServer/dev",
-    "code_url": "https://github.com/author/ns8-kickstart"
+    "documentation_url": "https://github.com/leemlwando/ns8-mail-webhooks/blob/main/README.md",
+    "bug_url": "https://github.com/leemlwando/ns8-mail-webhooks/issues",
+    "code_url": "https://github.com/leemlwando/ns8-mail-webhooks"
   },
-  "source": "ghcr.io/nethserver/kickstart"
+  "source": "ghcr.io/leemlwando/ns8-mail-webhooks"
 }

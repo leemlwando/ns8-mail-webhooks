@@ -1,5 +1,4 @@
-{
-    "common": {
+{    "common": {
         "required": "Required",
         "required_field": "This field is required",
         "work_in_progress": "Work in progress",
@@ -9,7 +8,9 @@
         "cancel": "Cancel",
         "save": "Save",
         "confirm_delete": "Confirm Delete",
-        "actions": "Actions"
+        "actions": "Actions",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
     },
     "webhooks": {
         "title": "Mail Webhooks",
@@ -46,27 +47,44 @@
         "job_complete": "Job Complete",
         "job_failed": "Job Failed",
         "emails_processed": "{count} emails were successfully processed."
-    },
-    "settings": {
+    },    "settings": {
         "title": "Settings",
         "configure_instance": "Configure {instance}",
         "save": "Save",
         "test_field": "Test field"
+    },
+    "status": {
+        "title": "Status",
+        "app_instance": "App instance",
+        "installation_node": "Installation node",
+        "module_version": "Module version",
+        "scheduler_status": "Scheduler status",
+        "scheduler_running": "Running",
+        "scheduler_stopped": "Stopped",
+        "processing_statistics": "Processing Statistics",
+        "total_emails_processed": "Total emails processed",
+        "successful_webhooks": "Successful webhooks",
+        "failed_webhooks": "Failed webhooks",
+        "active_schedules": "Active Schedules",
+        "no_active_schedules": "No active schedules",
+        "no_active_schedules_description": "Create your first scheduled trigger in the Webhooks tab",
+        "email_address": "Email address",
+        "webhook_url": "Webhook URL",
+        "last_run": "Last run",
+        "status": "Status",
+        "node": "Node"
     },
     "about": {
         "title": "About"
     },
     "task": {
         "cannot_create_task": "Cannot create task {action}"
-    },
-    "action": {
+    },    "action": {
         "get-status": "Get status",
         "get-configuration": "Get configuration",
         "configure-module": "Configure module",
         "get-module-info": "Get module info",
         "get-name": "Get name",
-        "list-backup-repositories": "List backup repositories",
-        "list-backups": "List backups",
         "list-installed-modules": "List installed modules"
     },
     "error": {
