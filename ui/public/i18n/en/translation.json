@@ -1,8 +1,20 @@
-{
-    "common": {
+{    "common": {
         "required": "Required",
         "work_in_progress": "Work in progress",
-        "processing": "Processing..."
+        "processing": "Processing...",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "create": "Create",
+        "edit": "Edit",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "close": "Close",
+        "actions": "Actions",
+        "search": "Search",
+        "status_code": "Status Code",
+        "response_time": "Response Time",
+        "response": "Response"
     },
     "status": {
         "title": "Status",
@@ -33,15 +45,51 @@
         "triggers_collection": "Triggers Collection",
         "logs_collection": "Logs Collection",
         "invalid_mongodb_url": "Invalid MongoDB URL. Must start with mongodb:// or mongodb+srv://",
-        "invalid_collection_name": "Invalid collection name. Must start with a letter or underscore and contain only letters, numbers, and underscores."
+        "invalid_collection_name": "Invalid collection name. Must start with a letter or underscore and contain only letters, numbers, and underscores."    },
+    "webhooks": {
+        "title": "Webhooks",
+        "no_webhooks": "No webhooks configured",
+        "create_webhook": "Create webhook",
+        "edit_webhook": "Edit webhook",
+        "delete_webhook": "Delete webhook",
+        "test_webhook": "Test webhook",
+        "webhook_name": "Webhook name",
+        "webhook_url": "Webhook URL",
+        "api_key": "API Key (optional)",
+        "payload_type": "Payload type",
+        "trigger_type": "Trigger type",
+        "interval": "Interval (seconds)",
+        "mailboxes": "Mailboxes",
+        "filters": "Filters",
+        "active": "Active",
+        "created_at": "Created",
+        "last_triggered": "Last triggered",
+        "never": "Never",
+        "raw_format": "RAW",
+        "json_format": "JSON",
+        "realtime": "Real-time",
+        "interval_based": "Interval-based",
+        "webhook_created": "Webhook created successfully",
+        "webhook_updated": "Webhook updated successfully",
+        "webhook_deleted": "Webhook deleted successfully",
+        "test_success": "Test successful",
+        "test_failed": "Test failed",        "confirm_delete": "Are you sure you want to delete this webhook?",
+        "webhook_name_required": "Webhook name is required",
+        "webhook_url_required": "Webhook URL is required",
+        "invalid_url": "Invalid URL format",
+        "invalid_interval": "Interval must be greater than 0",
+        "invalid_json": "Invalid JSON format",
+        "api_key_placeholder": "Optional - Bearer token or API key",
+        "mailboxes_placeholder": "Enter one mailbox per line (e.g., user@domain.com)\nLeave empty for all mailboxes",
+        "filters_placeholder": "JSON format filters (optional):\n{\n  \"subject\": \"contains text\",\n  \"sender\": \"user@domain.com\",\n  \"folder\": \"INBOX\"\n}",
+        "no_webhooks_description": "Create your first webhook to start receiving mail notifications"
     },
     "about": {
         "title": "About"
     },
     "task": {
         "cannot_create_task": "Cannot create task {action}"
-    },
-    "action": {
+    },    "action": {
         "get-status": "Get status",
         "get-configuration": "Get configuration",
         "configure-module": "Configure module",
@@ -49,7 +97,12 @@
         "get-name": "Get name",
         "list-backup-repositories": "List backup repositories",
         "list-backups": "List backups",
-        "list-installed-modules": "List installed modules"
+        "list-installed-modules": "List installed modules",
+        "list-webhooks": "List webhooks",
+        "create-webhook": "Create webhook",
+        "update-webhook": "Update webhook",
+        "delete-webhook": "Delete webhook",
+        "test-webhook": "Test webhook"
     },
     "error": {
         "error": "Error",

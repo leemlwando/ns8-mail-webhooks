@@ -24,16 +24,13 @@ ExecStart=/usr/bin/podman run \
     --cgroups=no-conmon \
     --replace --name=%N \
     --publish=127.0.0.1:${TCP_PORT}:8080 \
-    --volume=./api:/app:Z \
     --env=MONGODB_URL=${MONGODB_URL} \
     --env=MAIL_SERVER_UUID=${MAIL_SERVER_UUID} \
     --env=WEBHOOKS_COLLECTION=${WEBHOOKS_COLLECTION:-webhooks} \
     --env=EVENTS_COLLECTION=${EVENTS_COLLECTION:-events} \
-    --env=SETTINGS_COLLECTION=${SETTINGS_COLLECTION:-settings} \
-    --env=TRIGGERS_COLLECTION=${TRIGGERS_COLLECTION:-triggers} \
+    --env=SETTINGS_COLLECTION=${SETTINGS_COLLECTION:-settings} \    --env=TRIGGERS_COLLECTION=${TRIGGERS_COLLECTION:-triggers} \
     --env=LOGS_COLLECTION=${LOGS_COLLECTION:-logs} \
-    --workdir=/app \
-    python:3.11-slim bash -c "chmod +x /app/entrypoint.sh && /app/entrypoint.sh"
+    ${MAIL_WEBHOOKS_BACKEND_IMAGE}
 ExecStop=/usr/bin/podman stop --ignore --cidfile %t/mail-webhooks.ctr-id -t 10
 ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/mail-webhooks.ctr-id
 PIDFile=%t/mail-webhooks.pid

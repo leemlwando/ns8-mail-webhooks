@@ -13,13 +13,19 @@
       ></cv-skeleton-text>
     </div>
 
-    <cv-side-nav-items>
-      <cv-side-nav-link
+    <cv-side-nav-items>      <cv-side-nav-link
         @click="goToAppPage(instanceName, 'status')"
         :class="{ 'current-page': isLinkActive('status') }"
       >
         <template v-slot:nav-icon><Activity20 /></template>
         <span>{{ $t("status.title") }}</span>
+      </cv-side-nav-link>
+      <cv-side-nav-link
+        @click="goToAppPage(instanceName, 'webhooks')"
+        :class="{ 'current-page': isLinkActive('webhooks') }"
+      >
+        <template v-slot:nav-icon><API20 /></template>
+        <span>{{ $t("webhooks.title") }}</span>
       </cv-side-nav-link>
       <cv-side-nav-link
         @click="goToAppPage(instanceName, 'settings')"
@@ -43,15 +49,16 @@
 import Settings20 from "@carbon/icons-vue/es/settings/20";
 import Information20 from "@carbon/icons-vue/es/information/20";
 import Activity20 from "@carbon/icons-vue/es/activity/20";
+import API20 from "@carbon/icons-vue/es/API/20";
 import { mapState } from "vuex";
 import { QueryParamService, UtilService } from "@nethserver/ns8-ui-lib";
 
 export default {
-  name: "AppSideMenuContent",
-  components: {
+  name: "AppSideMenuContent",  components: {
     Settings20,
     Information20,
     Activity20,
+    API20,
   },
   mixins: [QueryParamService, UtilService],
   data() {

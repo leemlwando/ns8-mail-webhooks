@@ -1,13 +1,13 @@
 {
   "name": "mail-webhooks",
   "description": {
-    "en": "Mail Webhooks - Webhook triggers for incoming mail"
+    "en": "Mail Webhooks - Webhook triggers scheduled & for incoming mail"
   },
-  "categories": ["mail"],
+  "categories": ["mail", "webhooks"],
   "authors": [
     {
-      "name": "KSM Management Consultants",
-      "email": "info@ksmconsultants.com"
+      "name": "MicroTech Cloud Solutions Limited",
+      "email": "systems@microtech.co.zm"
     }
   ],
   "docs": {

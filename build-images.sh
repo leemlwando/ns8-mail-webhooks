@@ -39,7 +39,7 @@ buildah config --entrypoint=/ \
     --label="org.nethserver.authorizations=traefik@node:routeadm" \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
-    --label="org.nethserver.images=docker.io/jmalloc/echo-server:latest" \
+    --label="org.nethserver.images=${repobase}/mail-webhooks-backend:${IMAGETAG:-latest}" \
     "${container}"
 # Commit the image
 buildah commit "${container}" "${repobase}/${reponame}"
@@ -48,13 +48,15 @@ buildah commit "${container}" "${repobase}/${reponame}"
 images+=("${repobase}/${reponame}")
 
 #
-# NOTICE:
+# Build backend API container image
 #
-# It is possible to build and publish multiple images.
-#
-# 1. create another buildah container
-# 2. add things to it and commit it
-# 3. append the image url to the images array
+reponame_backend="mail-webhooks-backend"
+container_backend=$(buildah from --file backend/Containerfile backend)
+buildah commit "${container_backend}" "${repobase}/${reponame_backend}"
+
+# Append the backend image URL to the images array
+images+=("${repobase}/${reponame_backend}")
+
 #
 
 #

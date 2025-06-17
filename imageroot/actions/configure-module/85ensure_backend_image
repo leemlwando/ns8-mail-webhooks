@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+set -e
+exec 1>&2
+
+# Ensure the backend image is available (this should be handled automatically by the agent)
+# but we can add this as a safety check
+
+if [[ -n "${MAIL_WEBHOOKS_BACKEND_IMAGE}" ]]; then
+    echo "Backend image environment variable set: ${MAIL_WEBHOOKS_BACKEND_IMAGE}"
+    # Optionally pull the image to ensure it's available
+    podman pull "${MAIL_WEBHOOKS_BACKEND_IMAGE}" || echo "Warning: Could not pull backend image, will try to use local/cached version"
+else
+    echo "Error: MAIL_WEBHOOKS_BACKEND_IMAGE environment variable not set"
+    exit 1
+fi
