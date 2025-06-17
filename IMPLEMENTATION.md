@@ -3,9 +3,11 @@
 ## Project Overview
 
 **Module Name**: ns8-mail-webhooks  
+**Repository**: https://github.com/leemlwando/ns8-mail-webhooks  
+**Container Registry**: ghcr.io/leemlwando/ns8-mail-webhooks  
 **Purpose**: Create webhook triggers for incoming mail with configurable intervals, payload types, and management interface  
 **Date Started**: June 17, 2025  
-**NS8 Framework**: Based on ns8-kickstart template  
+**NS8 Framework**: Based on ns8-kickstart template
 
 ## Requirements Analysis
 

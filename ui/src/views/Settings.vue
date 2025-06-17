@@ -106,10 +106,13 @@
                     <cv-column>
                       <!-- Empty column for layout balance -->
                     </cv-column>
-                  </cv-row>
-                </template>
+                  </cv-row>                </template>
               </cv-accordion-item>
             </cv-accordion>
+
+            <!-- Add spacing after advanced section -->
+            <div style="margin-bottom: 2rem;"></div>
+
             <cv-row v-if="error.configureModule">
               <cv-column>
                 <NsInlineNotification

@@ -11,9 +11,9 @@
     }
   ],
   "docs": {
-    "documentation_url": "https://github.com/author/ns8-mail-webhooks",
-    "bug_url": "https://github.com/author/ns8-mail-webhooks/issues",
-    "code_url": "https://github.com/author/ns8-mail-webhooks"
+    "documentation_url": "https://github.com/leemlwando/ns8-mail-webhooks",
+    "bug_url": "https://github.com/leemlwando/ns8-mail-webhooks/issues",
+    "code_url": "https://github.com/leemlwando/ns8-mail-webhooks"
   },
-  "source": "ghcr.io/nethserver/ns8-mail-webhooks"
+  "source": "ghcr.io/leemlwando/ns8-mail-webhooks"
 }

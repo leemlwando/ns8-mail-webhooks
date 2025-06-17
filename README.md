@@ -14,12 +14,12 @@ Mail Webhooks module for [NethServer 8](https://github.com/NethServer/ns8-core) 
 
 Instantiate the module with:
 
-    add-module ghcr.io/nethserver/ns8-mail-webhooks:latest 1
+    add-module ghcr.io/leemlwando/ns8-mail-webhooks:latest 1
 
 The output of the command will return the instance name.
 Output example:
 
-    {"module_id": "mail-webhooks1", "image_name": "ns8-mail-webhooks", "image_url": "ghcr.io/nethserver/ns8-mail-webhooks:latest"}
+    {"module_id": "mail-webhooks1", "image_name": "ns8-mail-webhooks", "image_url": "ghcr.io/leemlwando/ns8-mail-webhooks:latest"}
 
 ## Configure
 
@@ -114,7 +114,7 @@ This module is currently in development. Phase 1 (Backend Foundation) is complet
 
 Test the module using the `test-module.sh` script:
 
-    ./test-module.sh <NODE_ADDR> ghcr.io/nethserver/ns8-mail-webhooks:latest
+    ./test-module.sh <NODE_ADDR> ghcr.io/leemlwando/ns8-mail-webhooks:latest
 
 The tests are made using [Robot Framework](https://robotframework.org/)
 
