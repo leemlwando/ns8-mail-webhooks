@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2023 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import os
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+def make_request(method, url, **kwargs):
+    """Make HTTP request with retry logic"""
+    session = requests.Session()
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    
+    try:
+        response = session.request(method, url, timeout=30, **kwargs)
+        return response
+    except Exception as e:
+        print(f"Request failed: {e}", file=sys.stderr)
+        raise
+
+def main():
+    try:
+        # Get backend URL from environment
+        backend_url = os.environ.get('BACKEND_URL', 'http://localhost:8080')
+        
+        # Make request to list webhooks
+        response = make_request('GET', f"{backend_url}/api/v1/webhooks")
+        
+        if response.status_code == 200:
+            webhooks_data = response.json()
+            result = {
+                "webhooks": webhooks_data.get("webhooks", [])
+            }
+        else:
+            print(f"Backend request failed with status {response.status_code}: {response.text}", file=sys.stderr)
+            result = {
+                "webhooks": []
+            }
+        
+        # Output result
+        json.dump(result, fp=sys.stdout, indent=2)
+        
+    except Exception as e:
+        print(f"Error listing webhooks: {e}", file=sys.stderr)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

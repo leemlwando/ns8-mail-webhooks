@@ -40,6 +40,9 @@ agent.set_env("SETTINGS_COLLECTION", request.get("settings_collection", "setting
 agent.set_env("TRIGGERS_COLLECTION", request.get("triggers_collection", "triggers"))
 agent.set_env("LOGS_COLLECTION", request.get("logs_collection", "logs"))
 
+# Set backend URL for webhook actions
+agent.set_env("BACKEND_URL", f"http://127.0.0.1:{os.environ['TCP_PORT']}")
+
 print(f"Environment variables set successfully", file=sys.stderr)
 
 # Configure Traefik to route "/mail-webhooks" path requests to the service

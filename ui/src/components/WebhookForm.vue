@@ -43,10 +43,10 @@
           :disabled="loading"
         >
           <cv-dropdown-item value="JSON">
-            {{ $t('webhooks.json_format') }}
+            {{ $t("webhooks.json_format") }}
           </cv-dropdown-item>
           <cv-dropdown-item value="RAW">
-            {{ $t('webhooks.raw_format') }}
+            {{ $t("webhooks.raw_format") }}
           </cv-dropdown-item>
         </cv-dropdown>
       </cv-column>
@@ -57,10 +57,10 @@
           :disabled="loading"
         >
           <cv-dropdown-item value="realtime">
-            {{ $t('webhooks.realtime') }}
+            {{ $t("webhooks.realtime") }}
           </cv-dropdown-item>
           <cv-dropdown-item value="interval">
-            {{ $t('webhooks.interval_based') }}
+            {{ $t("webhooks.interval_based") }}
           </cv-dropdown-item>
         </cv-dropdown>
       </cv-column>
@@ -154,7 +154,7 @@ export default {
       },
       set(value) {
         this.webhookForm.mailboxes = value
-          ? value.split("\n").filter(line => line.trim())
+          ? value.split("\n").filter((line) => line.trim())
           : [];
         this.emitUpdate();
       },
@@ -172,7 +172,7 @@ export default {
           this.webhookForm.filters = value ? JSON.parse(value) : {};
           this.validationErrors.filters = "";
         } catch (error) {
-          this.validationErrors.filters = this.$t('webhooks.invalid_json');
+          this.validationErrors.filters = this.$t("webhooks.invalid_json");
         }
         this.emitUpdate();
       },
@@ -200,22 +200,22 @@ export default {
 
       // Validate required fields
       if (!this.webhookForm.name.trim()) {
-        this.validationErrors.name = this.$t('webhooks.webhook_name_required');
+        this.validationErrors.name = this.$t("webhooks.webhook_name_required");
         isValid = false;
       }
 
       if (!this.webhookForm.url.trim()) {
-        this.validationErrors.url = this.$t('webhooks.webhook_url_required');
+        this.validationErrors.url = this.$t("webhooks.webhook_url_required");
         isValid = false;
       } else if (!this.isValidUrl(this.webhookForm.url)) {
-        this.validationErrors.url = this.$t('webhooks.invalid_url');
+        this.validationErrors.url = this.$t("webhooks.invalid_url");
         isValid = false;
       }
 
       // Validate interval for interval-based triggers
-      if (this.webhookForm.trigger_type === 'interval') {
+      if (this.webhookForm.trigger_type === "interval") {
         if (!this.webhookForm.interval || this.webhookForm.interval <= 0) {
-          this.validationErrors.interval = this.$t('webhooks.invalid_interval');
+          this.validationErrors.interval = this.$t("webhooks.invalid_interval");
           isValid = false;
         }
       }
@@ -225,7 +225,7 @@ export default {
         try {
           JSON.parse(this.filtersText);
         } catch {
-          this.validationErrors.filters = this.$t('webhooks.invalid_json');
+          this.validationErrors.filters = this.$t("webhooks.invalid_json");
           isValid = false;
         }
       }
@@ -233,7 +233,7 @@ export default {
       return isValid;
     },
     clearValidationErrors() {
-      Object.keys(this.validationErrors).forEach(key => {
+      Object.keys(this.validationErrors).forEach((key) => {
         this.validationErrors[key] = "";
       });
     },
@@ -246,7 +246,7 @@ export default {
       }
     },
     emitUpdate() {
-      this.$emit('input', { ...this.webhookForm });
+      this.$emit("input", { ...this.webhookForm });
     },
   },
 };

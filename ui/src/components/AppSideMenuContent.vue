@@ -11,7 +11,8 @@
         v-else
         :width="instanceNameSkeletonWidth"
       ></cv-skeleton-text>
-    </div>    <cv-side-nav-items>
+    </div>
+    <cv-side-nav-items>
       <cv-side-nav-link
         @click="goToAppPage(instanceName, 'status')"
         :class="{ 'current-page': isLinkActive('status') }"

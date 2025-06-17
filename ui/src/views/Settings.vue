@@ -20,7 +20,8 @@
       </cv-column>
     </cv-row>
     <cv-row>
-      <cv-column>        <cv-tile light>
+      <cv-column>
+        <cv-tile light>
           <cv-form @submit.prevent="configureModule">
             <!-- MongoDB Configuration -->
             <cv-text-input
@@ -46,7 +47,9 @@
             <!-- Collection Names Section -->
             <cv-accordion>
               <cv-accordion-item>
-                <template slot="title">{{ $t('settings.collection_names') }}</template>
+                <template slot="title">{{
+                  $t("settings.collection_names")
+                }}</template>
                 <template slot="content">
                   <cv-row>
                     <cv-column>
@@ -54,7 +57,9 @@
                         :label="$t('settings.webhooks_collection')"
                         v-model="webhooks_collection"
                         :placeholder="'webhooks'"
-                        :disabled="loading.getConfiguration || loading.configureModule"
+                        :disabled="
+                          loading.getConfiguration || loading.configureModule
+                        "
                         :invalid-message="error.webhooks_collection"
                         ref="webhooks_collection"
                       ></cv-text-input>
@@ -64,7 +69,9 @@
                         :label="$t('settings.events_collection')"
                         v-model="events_collection"
                         :placeholder="'events'"
-                        :disabled="loading.getConfiguration || loading.configureModule"
+                        :disabled="
+                          loading.getConfiguration || loading.configureModule
+                        "
                         :invalid-message="error.events_collection"
                         ref="events_collection"
                       ></cv-text-input>
@@ -76,7 +83,9 @@
                         :label="$t('settings.settings_collection')"
                         v-model="settings_collection"
                         :placeholder="'settings'"
-                        :disabled="loading.getConfiguration || loading.configureModule"
+                        :disabled="
+                          loading.getConfiguration || loading.configureModule
+                        "
                         :invalid-message="error.settings_collection"
                         ref="settings_collection"
                       ></cv-text-input>
@@ -86,7 +95,9 @@
                         :label="$t('settings.triggers_collection')"
                         v-model="triggers_collection"
                         :placeholder="'triggers'"
-                        :disabled="loading.getConfiguration || loading.configureModule"
+                        :disabled="
+                          loading.getConfiguration || loading.configureModule
+                        "
                         :invalid-message="error.triggers_collection"
                         ref="triggers_collection"
                       ></cv-text-input>
@@ -98,7 +109,9 @@
                         :label="$t('settings.logs_collection')"
                         v-model="logs_collection"
                         :placeholder="'logs'"
-                        :disabled="loading.getConfiguration || loading.configureModule"
+                        :disabled="
+                          loading.getConfiguration || loading.configureModule
+                        "
                         :invalid-message="error.logs_collection"
                         ref="logs_collection"
                       ></cv-text-input>
@@ -106,12 +119,13 @@
                     <cv-column>
                       <!-- Empty column for layout balance -->
                     </cv-column>
-                  </cv-row>                </template>
+                  </cv-row>
+                </template>
               </cv-accordion-item>
             </cv-accordion>
 
             <!-- Add spacing after advanced section -->
-            <div style="margin-bottom: 2rem;"></div>
+            <div style="margin-bottom: 2rem"></div>
 
             <cv-row v-if="error.configureModule">
               <cv-column>
@@ -159,7 +173,8 @@ export default {
   ],
   pageTitle() {
     return this.$t("settings.title") + " - " + this.appName;
-  },  data() {
+  },
+  data() {
     return {
       q: {
         page: "settings",
@@ -247,7 +262,8 @@ export default {
       console.error(`${taskContext.action} aborted`, taskResult);
       this.error.getConfiguration = this.$t("error.generic_error");
       this.loading.getConfiguration = false;
-    },    getConfigurationCompleted(taskContext, taskResult) {
+    },
+    getConfigurationCompleted(taskContext, taskResult) {
       this.loading.getConfiguration = false;
       const config = taskResult.output;
 
@@ -264,7 +280,8 @@ export default {
 
       // Focus first configuration field
       this.focusElement("mongodb_url");
-    },    validateConfigureModule() {
+    },
+    validateConfigureModule() {
       this.clearErrors(this);
       let isValidationOk = true;
 
@@ -275,7 +292,10 @@ export default {
           this.focusElement("mongodb_url");
           isValidationOk = false;
         }
-      } else if (!this.mongodb_url.startsWith("mongodb://") && !this.mongodb_url.startsWith("mongodb+srv://")) {
+      } else if (
+        !this.mongodb_url.startsWith("mongodb://") &&
+        !this.mongodb_url.startsWith("mongodb+srv://")
+      ) {
         this.error.mongodb_url = this.$t("settings.invalid_mongodb_url");
         if (isValidationOk) {
           this.focusElement("mongodb_url");
@@ -286,16 +306,18 @@ export default {
       // Validate collection names (must be valid MongoDB collection names)
       const collectionNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
       const collections = [
-        { field: 'webhooks_collection', value: this.webhooks_collection },
-        { field: 'events_collection', value: this.events_collection },
-        { field: 'settings_collection', value: this.settings_collection },
-        { field: 'triggers_collection', value: this.triggers_collection },
-        { field: 'logs_collection', value: this.logs_collection }
+        { field: "webhooks_collection", value: this.webhooks_collection },
+        { field: "events_collection", value: this.events_collection },
+        { field: "settings_collection", value: this.settings_collection },
+        { field: "triggers_collection", value: this.triggers_collection },
+        { field: "logs_collection", value: this.logs_collection },
       ];
 
       for (const collection of collections) {
         if (collection.value && !collectionNamePattern.test(collection.value)) {
-          this.error[collection.field] = this.$t("settings.invalid_collection_name");
+          this.error[collection.field] = this.$t(
+            "settings.invalid_collection_name"
+          );
           if (isValidationOk) {
             this.focusElement(collection.field);
             isValidationOk = false;
@@ -349,14 +371,15 @@ export default {
       this.core.$root.$once(
         `${taskAction}-completed-${eventId}`,
         this.configureModuleCompleted
-      );      const res = await to(
+      );
+      const res = await to(
         this.createModuleTaskForApp(this.instanceName, {
           action: taskAction,
           data: {
             mongodb_url: this.mongodb_url,
             mail_server_uuid: this.mail_server_uuid || undefined,
             webhooks_collection: this.webhooks_collection || "webhooks",
-            events_collection: this.events_collection || "events", 
+            events_collection: this.events_collection || "events",
             settings_collection: this.settings_collection || "settings",
             triggers_collection: this.triggers_collection || "triggers",
             logs_collection: this.logs_collection || "logs",

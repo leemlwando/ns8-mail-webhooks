@@ -42,14 +42,18 @@
             :searchPlaceholder="$t('common.search')"
             ref="webhooksTable"
           >
-            <template slot="data" slot-scope="{ row, index }">
+            <template slot="data" slot-scope="{ row }">
               <cv-data-table-row :key="row.id">
                 <cv-data-table-cell>{{ row.name }}</cv-data-table-cell>
                 <cv-data-table-cell>{{ row.url }}</cv-data-table-cell>
                 <cv-data-table-cell>
                   <cv-tag
                     :kind="row.payload_type === 'JSON' ? 'blue' : 'gray'"
-                    :label="$t('webhooks.' + row.payload_type.toLowerCase() + '_format')"
+                    :label="
+                      $t(
+                        'webhooks.' + row.payload_type.toLowerCase() + '_format'
+                      )
+                    "
                   />
                 </cv-data-table-cell>
                 <cv-data-table-cell>
@@ -61,10 +65,14 @@
                 <cv-data-table-cell>
                   <cv-tag
                     :kind="row.active ? 'green' : 'red'"
-                    :label="row.active ? $t('common.enabled') : $t('common.disabled')"
+                    :label="
+                      row.active ? $t('common.enabled') : $t('common.disabled')
+                    "
                   />
                 </cv-data-table-cell>
-                <cv-data-table-cell>{{ formatDate(row.last_triggered) }}</cv-data-table-cell>
+                <cv-data-table-cell>{{
+                  formatDate(row.last_triggered)
+                }}</cv-data-table-cell>
                 <cv-data-table-cell>
                   <cv-overflow-menu>
                     <cv-overflow-menu-option @click="testWebhook(row)">
@@ -83,17 +91,15 @@
                 </cv-data-table-cell>
               </cv-data-table-row>
             </template>
-          </cv-data-table>          <!-- Empty State -->
+          </cv-data-table>
+          <!-- Empty State -->
           <NsEmptyState
             v-else-if="!loading.listWebhooks && webhooks.length === 0"
             :title="$t('webhooks.no_webhooks')"
             :description="$t('webhooks.no_webhooks_description')"
           >
             <template #action>
-              <cv-button
-                kind="primary"
-                @click="showCreateModal = true"
-              >
+              <cv-button kind="primary" @click="showCreateModal = true">
                 {{ $t("webhooks.create_webhook") }}
               </cv-button>
             </template>
@@ -112,7 +118,9 @@
     <!-- Create/Edit Webhook Modal -->
     <cv-modal
       :visible="showCreateModal || showEditModal"
-      :primary-button-text="editingWebhook ? $t('common.save') : $t('common.create')"
+      :primary-button-text="
+        editingWebhook ? $t('common.save') : $t('common.create')
+      "
       :secondary-button-text="$t('common.cancel')"
       @primary-click="saveWebhook"
       @secondary-click="closeModal"
@@ -121,7 +129,11 @@
       size="large"
     >
       <template slot="title">
-        {{ editingWebhook ? $t("webhooks.edit_webhook") : $t("webhooks.create_webhook") }}
+        {{
+          editingWebhook
+            ? $t("webhooks.edit_webhook")
+            : $t("webhooks.create_webhook")
+        }}
       </template>
       <template slot="content">
         <WebhookForm
@@ -142,10 +154,13 @@
       @primary-click="deleteWebhook"
       @modal-hidden="showDeleteModal = false"
       :primary-button-disabled="loading.deleteWebhook"
-    >      <template slot="title">{{ $t("webhooks.delete_webhook") }}</template>
+    >
+      <template slot="title">{{ $t("webhooks.delete_webhook") }}</template>
       <template slot="content">
         <p>{{ $t("webhooks.confirm_delete") }}</p>
-        <p><strong>{{ webhookToDelete && webhookToDelete.name }}</strong></p>
+        <p>
+          <strong>{{ webhookToDelete && webhookToDelete.name }}</strong>
+        </p>
       </template>
     </NsModal>
 
@@ -163,17 +178,27 @@
           <div class="test-result-status">
             <cv-tag
               :kind="testResult.success ? 'green' : 'red'"
-              :label="testResult.success ? $t('webhooks.test_success') : $t('webhooks.test_failed')"
+              :label="
+                testResult.success
+                  ? $t('webhooks.test_success')
+                  : $t('webhooks.test_failed')
+              "
             />
-            <span class="test-status-code">{{ $t('common.status_code') }}: {{ testResult.status_code }}</span>
-            <span class="test-response-time">{{ $t('common.response_time') }}: {{ testResult.response_time }}s</span>
+            <span class="test-status-code"
+              >{{ $t("common.status_code") }}:
+              {{ testResult.status_code }}</span
+            >
+            <span class="test-response-time"
+              >{{ $t("common.response_time") }}:
+              {{ testResult.response_time }}s</span
+            >
           </div>
           <div v-if="testResult.response_body" class="test-response">
-            <h5>{{ $t('common.response') }}:</h5>
+            <h5>{{ $t("common.response") }}:</h5>
             <pre>{{ testResult.response_body }}</pre>
           </div>
           <div v-if="testResult.error" class="test-error">
-            <h5>{{ $t('error.error') }}:</h5>
+            <h5>{{ $t("error.error") }}:</h5>
             <p>{{ testResult.error }}</p>
           </div>
         </div>
@@ -368,9 +393,7 @@ export default {
 
       this.closeModal();
       this.listWebhooks();
-      this.createNotificationSuccess(
-        this.$t("webhooks.webhook_created")
-      );
+      this.createNotificationSuccess(this.$t("webhooks.webhook_created"));
     },
     async updateWebhook() {
       this.loading.updateWebhook = true;
@@ -414,9 +437,7 @@ export default {
 
       this.closeModal();
       this.listWebhooks();
-      this.createNotificationSuccess(
-        this.$t("webhooks.webhook_updated")
-      );
+      this.createNotificationSuccess(this.$t("webhooks.webhook_updated"));
     },
     async deleteWebhook() {
       this.loading.deleteWebhook = true;
@@ -460,9 +481,7 @@ export default {
       this.showDeleteModal = false;
       this.webhookToDelete = null;
       this.listWebhooks();
-      this.createNotificationSuccess(
-        this.$t("webhooks.webhook_deleted")
-      );
+      this.createNotificationSuccess(this.$t("webhooks.webhook_deleted"));
     },
     async testWebhook(webhook) {
       this.loading.testWebhook = true;
