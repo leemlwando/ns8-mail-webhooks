@@ -1,0 +1,288 @@
+#!/usr/bin/env python3
+"""
+Webhook Event Bridge for NS8 Mail Webhooks Module
+
+This script bridges mail events from the NS8 mail system to webhook deliveries.
+It monitors mail events and triggers appropriate webhooks.
+
+Copyright (C) 2025 Lee M. Lwando <leemlwando@gmail.com>
+Licensed under GPL-3.0
+"""
+
+import os
+import sys
+import json
+import time
+import signal
+import logging
+import asyncio
+import aiohttp
+from typing import Dict, List, Optional, Any
+from datetime import datetime
+
+# Add pypkg to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'pypkg'))
+
+from config_manager import ConfigManager
+from mail_config_manager import MailConfigManager
+
+class WebhookEventBridge:
+    """Bridges mail events to webhook deliveries"""
+    
+    def __init__(self):
+        self.config_manager = ConfigManager()
+        self.mail_config = MailConfigManager()
+        self.running = False
+        self.webhook_api_url = None
+        
+        # Setup logging
+        log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
+        logging.basicConfig(
+            level=getattr(logging, log_level),
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        self.logger = logging.getLogger('webhook-event-bridge')
+        
+    async def start(self):
+        """Start the event bridge"""
+        self.logger.info("Starting NS8 Mail Webhook Event Bridge...")
+        
+        try:
+            # Load configuration
+            config = self.config_manager.get_config()
+            
+            # Get webhook API URL
+            api_port = os.environ.get('API_PORT', '3000')
+            self.webhook_api_url = f"http://localhost:{api_port}/api"
+            
+            self.logger.info(f"Webhook API URL: {self.webhook_api_url}")
+            
+            # Set up signal handlers
+            signal.signal(signal.SIGTERM, self._signal_handler)
+            signal.signal(signal.SIGINT, self._signal_handler)
+            
+            self.running = True
+            
+            # Start event monitoring
+            await self._monitor_mail_events()
+            
+        except Exception as e:
+            self.logger.error(f"Failed to start event bridge: {e}")
+            sys.exit(1)
+    
+    def _signal_handler(self, signum, frame):
+        """Handle shutdown signals"""
+        self.logger.info(f"Received signal {signum}, shutting down...")
+        self.running = False
+    
+    async def _monitor_mail_events(self):
+        """Monitor mail events and trigger webhooks"""
+        self.logger.info("Starting mail event monitoring...")
+        
+        while self.running:
+            try:
+                # In a real implementation, this would:
+                # 1. Connect to mail system (IMAP, postfix logs, etc.)
+                # 2. Monitor for events (new mail, sent mail, bounces, etc.)
+                # 3. Parse events and extract relevant data
+                # 4. Trigger webhooks based on event type
+                
+                # For now, simulate checking for events
+                await self._check_mail_events()
+                
+                # Wait before next check
+                await asyncio.sleep(10)
+                
+            except Exception as e:
+                self.logger.error(f"Error monitoring mail events: {e}")
+                await asyncio.sleep(30)  # Wait longer on error
+    
+    async def _check_mail_events(self):
+        """Check for new mail events"""
+        # This is a placeholder implementation
+        # In reality, this would:
+        # - Connect to IMAP server to check for new messages
+        # - Parse mail logs for delivery events
+        # - Monitor database for mail status changes
+        
+        self.logger.debug("Checking for mail events...")
+        
+        # Example: Check IMAP for new messages
+        if await self._check_imap_new_messages():
+            self.logger.debug("Found new messages in IMAP")
+        
+        # Example: Check mail logs for delivery events
+        if await self._check_mail_logs():
+            self.logger.debug("Found delivery events in logs")
+    
+    async def _check_imap_new_messages(self) -> bool:
+        """Check IMAP for new messages"""
+        try:
+            # Get mail configuration
+            mail_config = self.mail_config.get_mail_config()
+            
+            if not mail_config.get('imap_enabled'):
+                return False
+            
+            # In a real implementation:
+            # 1. Connect to IMAP server
+            # 2. Check for UNSEEN messages
+            # 3. Process new messages
+            # 4. Trigger email_received webhooks
+            
+            # Placeholder - simulate finding new messages occasionally
+            import random
+            if random.random() < 0.1:  # 10% chance
+                await self._trigger_webhook_event('email_received', {
+                    'message_id': f'msg_{int(time.time())}',
+                    'from': 'sender@example.com',
+                    'to': 'recipient@example.com',
+                    'subject': 'Test Email',
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+                return True
+                
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"Error checking IMAP: {e}")
+            return False
+    
+    async def _check_mail_logs(self) -> bool:
+        """Check mail server logs for events"""
+        try:
+            # In a real implementation:
+            # 1. Parse postfix/dovecot logs
+            # 2. Extract delivery events (sent, bounced, delivered, etc.)
+            # 3. Trigger appropriate webhooks
+            
+            # Placeholder - simulate finding log events occasionally
+            import random
+            if random.random() < 0.05:  # 5% chance
+                event_type = random.choice(['email_sent', 'email_delivered', 'email_bounced'])
+                await self._trigger_webhook_event(event_type, {
+                    'message_id': f'msg_{int(time.time())}',
+                    'from': 'sender@example.com',
+                    'to': 'recipient@example.com',
+                    'status': event_type.replace('email_', ''),
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+                return True
+                
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"Error checking mail logs: {e}")
+            return False
+    
+    async def _trigger_webhook_event(self, event_type: str, event_data: Dict[str, Any]):
+        """Trigger webhooks for a specific event"""
+        try:
+            self.logger.info(f"Triggering webhooks for event: {event_type}")
+            
+            # Get webhooks that handle this event type
+            webhooks = await self._get_webhooks_for_event(event_type)
+            
+            if not webhooks:
+                self.logger.debug(f"No webhooks configured for event: {event_type}")
+                return
+            
+            # Create webhook payload
+            payload = {
+                'event': event_type,
+                'timestamp': datetime.utcnow().isoformat(),
+                'data': event_data,
+                'source': 'ns8-mail-webhooks'
+            }
+            
+            # Trigger deliveries
+            for webhook in webhooks:
+                await self._queue_webhook_delivery(webhook, payload)
+                
+        except Exception as e:
+            self.logger.error(f"Error triggering webhook event: {e}")
+    
+    async def _get_webhooks_for_event(self, event_type: str) -> List[Dict[str, Any]]:
+        """Get webhooks that should receive this event type"""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{self.webhook_api_url}/webhooks") as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if data.get('success'):
+                            webhooks = data.get('data', [])
+                            # Filter webhooks that handle this event type
+                            return [
+                                webhook for webhook in webhooks
+                                if webhook.get('active') and event_type in webhook.get('events', [])
+                            ]
+            return []
+            
+        except Exception as e:
+            self.logger.error(f"Error getting webhooks for event {event_type}: {e}")
+            return []
+    
+    async def _queue_webhook_delivery(self, webhook: Dict[str, Any], payload: Dict[str, Any]):
+        """Queue a webhook delivery"""
+        try:
+            # Apply filters if configured
+            if not self._passes_filters(webhook, payload):
+                self.logger.debug(f"Event filtered out for webhook {webhook['id']}")
+                return
+            
+            # Queue delivery via API
+            delivery_data = {
+                'webhook_id': webhook['id'],
+                'event_type': payload['event'],
+                'payload': payload
+            }
+            
+            async with aiohttp.ClientSession() as session:
+                # In a real implementation, this might queue the delivery
+                # For now, we'll trigger it directly
+                test_url = f"{self.webhook_api_url}/webhooks/{webhook['id']}/test"
+                async with session.post(test_url, json=payload) as response:
+                    if response.status == 200:
+                        self.logger.info(f"Webhook delivery queued for {webhook['id']}")
+                    else:
+                        self.logger.error(f"Failed to queue webhook delivery: {response.status}")
+                        
+        except Exception as e:
+            self.logger.error(f"Error queuing webhook delivery: {e}")
+    
+    def _passes_filters(self, webhook: Dict[str, Any], payload: Dict[str, Any]) -> bool:
+        """Check if event passes webhook filters"""
+        try:
+            # Check mailbox filter
+            mailbox_filter = webhook.get('mailbox_filter')
+            if mailbox_filter:
+                recipient = payload.get('data', {}).get('to', '')
+                if mailbox_filter not in recipient:
+                    return False
+            
+            # Check domain filter
+            domain_filter = webhook.get('domain_filter')
+            if domain_filter:
+                sender = payload.get('data', {}).get('from', '')
+                if not sender.endswith(f'@{domain_filter}'):
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error checking filters: {e}")
+            return True  # Allow delivery on filter error
+
+async def main():
+    """Main entry point"""
+    bridge = WebhookEventBridge()
+    await bridge.start()
+
+if __name__ == '__main__':
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Shutdown requested by user")
+    except Exception as e:
+        print(f"Fatal error: {e}")
+        sys.exit(1)

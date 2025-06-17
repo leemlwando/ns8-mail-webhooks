@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2023 Nethesis S.r.l.
+// Copyright (C) 2025 Lee M. Lwando <leemlwando@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 import Vue from "vue";
@@ -9,7 +9,7 @@ Vue.use(Vuex);
 
 export default new Vuex.Store({
   state: {
-    appName: "",
+    appName: "Mail Webhooks",
     instanceName: "",
     instanceLabel: "",
     core: null,

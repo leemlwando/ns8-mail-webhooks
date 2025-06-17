@@ -1,5 +1,5 @@
 <!--
-  Copyright (C) 2023 Nethesis S.r.l.
+  Copyright (C) 2025 Lee M. Lwando <leemlwando@gmail.com>
   SPDX-License-Identifier: GPL-3.0-or-later
 -->
 <template>
@@ -132,8 +132,8 @@
                     {{ app.authors[0].email }}
                   </cv-link>
                 </span>
-                <ul v-else class="authors">
-                  <li
+                <div v-else class="authors">
+                  <div
                     v-for="(author, index) in app.authors"
                     :key="index"
                     class="author"
@@ -147,8 +147,8 @@
                     >
                       {{ author.email }}
                     </cv-link>
-                  </li>
-                </ul>
+                  </div>
+                </div>
               </span>
             </div>
           </div>
@@ -163,15 +163,21 @@ import to from "await-to-js";
 import { mapState } from "vuex";
 import {
   QueryParamService,
-  TaskService,
   UtilService,
+  TaskService,
+  IconService,
   PageTitleService,
 } from "@nethserver/ns8-ui-lib";
 
 export default {
   name: "About",
-  components: {},
-  mixins: [TaskService, QueryParamService, UtilService, PageTitleService],
+  mixins: [
+    TaskService,
+    IconService,
+    UtilService,
+    QueryParamService,
+    PageTitleService,
+  ],
   pageTitle() {
     return this.$t("about.title") + " - " + this.appName;
   },

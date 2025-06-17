@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+
+"""
+Configure Module Action for NS8 Mail Webhooks
+
+Copyright (C) 2025 Lee M. Lwando <leemlwando@gmail.com>
+Licensed under GPL-3.0
+"""
+
+import json
+import sys
+import os
+import agent
+
+# Add module's python package to path
+module_id = os.environ.get('MODULE_ID', 'webhooks1')
+sys.path.insert(0, f'/home/{module_id}/.local/share/container/pypkg')
+
+from config_manager import ConfigManager
+
+def main():
+    try:
+        # Read input
+        request = json.load(sys.stdin)
+        
+        # Initialize config manager
+        config_mgr = ConfigManager(module_id)
+        
+        # Merge with existing configuration
+        current_config = config_mgr.read_config()
+        current_config.update(request)
+        
+        # Validate configuration
+        validate_configuration(current_config)
+        
+        # Prepare environment variables for services
+        env_vars = {
+            'MODULE_ID': module_id,
+            'LOG_LEVEL': current_config.get('log_level', 'info'),
+            'API_PORT': str(current_config.get('api_port', 3000)),
+            'API_MEMORY_LIMIT': current_config.get('api_memory_limit', '256M'),
+            'MAX_CONCURRENT_DELIVERIES': str(current_config.get('max_concurrent_deliveries', 10)),
+            'DEFAULT_TIMEOUT': str(current_config.get('default_timeout', 30)),
+            'RETRY_ATTEMPTS': str(current_config.get('default_retry_attempts', 3)),
+            'RETRY_DELAY': str(current_config.get('retry_delay', 60)),
+            'REQUIRE_TLS': str(current_config.get('require_tls', True)).lower(),
+            'VERIFY_SSL_CERTIFICATES': str(current_config.get('verify_ssl_certificates', True)).lower(),
+            'BATCH_SIZE': str(current_config.get('batch_size', 10)),
+            'BATCH_DELAY': str(current_config.get('batch_delay', 1000)),
+            'LOG_RETENTION_DAYS': str(current_config.get('log_retention_days', 30)),
+            'ENABLE_API_METRICS': str(current_config.get('enable_api_metrics', True)).lower(),
+            'PREFERRED_MAIL_MODULE': current_config.get('preferred_mail_module', ''),
+            'EVENT_SUBSCRIPTION_MODE': current_config.get('event_subscription_mode', 'automatic'),
+            'ALLOWED_HOSTS': current_config.get('allowed_hosts', '')
+        }
+        
+        # Save configuration
+        config_mgr.write_config(current_config)
+        config_mgr.write_env(env_vars)
+        
+        # Restart services to apply new configuration
+        restart_services()
+        
+        json.dump({
+            'status': 'success',
+            'message': 'Module configured successfully'
+        }, sys.stdout)
+        
+    except Exception as e:
+        json.dump({
+            'status': 'error',
+            'error': str(e)
+        }, sys.stdout)
+        sys.exit(1)
+
+def validate_configuration(config):
+    """Validate configuration parameters"""
+    
+    # Validate numeric ranges
+    if config.get('api_port'):
+        port = int(config['api_port'])
+        if port < 3000 or port > 65535:
+            raise ValueError('API port must be between 3000 and 65535')
+    
+    if config.get('max_concurrent_deliveries'):
+        concurrent = int(config['max_concurrent_deliveries'])
+        if concurrent < 1 or concurrent > 50:
+            raise ValueError('Max concurrent deliveries must be between 1 and 50')
+    
+    if config.get('default_timeout'):
+        timeout = int(config['default_timeout'])
+        if timeout < 5 or timeout > 300:
+            raise ValueError('Default timeout must be between 5 and 300 seconds')
+    
+    if config.get('log_retention_days'):
+        retention = int(config['log_retention_days'])
+        if retention < 1 or retention > 365:
+            raise ValueError('Log retention must be between 1 and 365 days')
+    
+    # Validate enum values
+    valid_log_levels = ['debug', 'info', 'warn', 'error']
+    if config.get('log_level') and config['log_level'] not in valid_log_levels:
+        raise ValueError(f'Log level must be one of: {", ".join(valid_log_levels)}')
+    
+    valid_memory_limits = ['128M', '256M', '512M', '1G']
+    if config.get('api_memory_limit') and config['api_memory_limit'] not in valid_memory_limits:
+        raise ValueError(f'Memory limit must be one of: {", ".join(valid_memory_limits)}')
+
+def restart_services():
+    """Restart services to apply new configuration"""
+    try:
+        # Restart webhook server
+        agent.run_helper('systemctl', '--user', 'restart', 'webhook-server.service')
+        
+        # Restart event bridge
+        agent.run_helper('systemctl', '--user', 'restart', 'webhook-event-bridge.service')
+        
+    except Exception as e:
+        # Log but don't fail on service restart errors
+        print(f"Warning: Failed to restart some services: {e}", file=sys.stderr)
+
+if __name__ == '__main__':
+    main()

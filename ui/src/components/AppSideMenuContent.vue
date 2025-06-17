@@ -1,5 +1,5 @@
 <!--
-  Copyright (C) 2023 Nethesis S.r.l.
+  Copyright (C) 2025 Lee M. Lwando <leemlwando@gmail.com>
   SPDX-License-Identifier: GPL-3.0-or-later
 -->
 <template>
@@ -13,7 +13,8 @@
       ></cv-skeleton-text>
     </div>
 
-    <cv-side-nav-items>      <cv-side-nav-link
+    <cv-side-nav-items>
+      <cv-side-nav-link
         @click="goToAppPage(instanceName, 'status')"
         :class="{ 'current-page': isLinkActive('status') }"
       >
@@ -21,11 +22,25 @@
         <span>{{ $t("status.title") }}</span>
       </cv-side-nav-link>
       <cv-side-nav-link
-        @click="goToAppPage(instanceName, 'mail-webhooks')"
-        :class="{ 'current-page': isLinkActive('mail-webhooks') }"
+        @click="goToAppPage(instanceName, 'webhooks')"
+        :class="{ 'current-page': isLinkActive('webhooks') }"
       >
-        <template v-slot:nav-icon><Email20 /></template>
-        <span>{{ $t("mail_webhooks.title") }}</span>
+        <template v-slot:nav-icon><Webhook20 /></template>
+        <span>{{ $t("webhooks.title") }}</span>
+      </cv-side-nav-link>
+      <cv-side-nav-link
+        @click="goToAppPage(instanceName, 'scheduled')"
+        :class="{ 'current-page': isLinkActive('scheduled') }"
+      >
+        <template v-slot:nav-icon><Time20 /></template>
+        <span>{{ $t("scheduled.title") }}</span>
+      </cv-side-nav-link>
+      <cv-side-nav-link
+        @click="goToAppPage(instanceName, 'logs')"
+        :class="{ 'current-page': isLinkActive('logs') }"
+      >
+        <template v-slot:nav-icon><DocumentText20 /></template>
+        <span>{{ $t("logs.title") }}</span>
       </cv-side-nav-link>
       <cv-side-nav-link
         @click="goToAppPage(instanceName, 'settings')"
@@ -49,16 +64,21 @@
 import Settings20 from "@carbon/icons-vue/es/settings/20";
 import Information20 from "@carbon/icons-vue/es/information/20";
 import Activity20 from "@carbon/icons-vue/es/activity/20";
-import Email20 from "@carbon/icons-vue/es/email/20";
+import Time20 from "@carbon/icons-vue/es/time/20";
+import DocumentText20 from "@carbon/icons-vue/es/document--text/20";
+import Webhook20 from "@carbon/icons-vue/es/webhook/20";
 import { mapState } from "vuex";
 import { QueryParamService, UtilService } from "@nethserver/ns8-ui-lib";
 
 export default {
-  name: "AppSideMenuContent",  components: {
+  name: "AppSideMenuContent",
+  components: {
     Settings20,
     Information20,
     Activity20,
-    Email20,
+    Time20,
+    DocumentText20,
+    Webhook20,
   },
   mixins: [QueryParamService, UtilService],
   data() {

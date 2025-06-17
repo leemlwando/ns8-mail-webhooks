@@ -1,0 +1,27 @@
+[Unit]
+Description=Webhook Event Bridge for %i
+After=default.target webhook-server.service
+Wants=webhook-server.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/.local/share/container/bin/webhook-event-bridge
+WorkingDirectory=%h/.local/share/container
+EnvironmentFile=%h/.config/state/environment
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Resource limits
+MemoryMax=128M
+TasksMax=10
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=default.target

@@ -1,5 +1,5 @@
 <!--
-  Copyright (C) 2023 Nethesis S.r.l.
+  Copyright (C) 2025 Lee M. Lwando <leemlwando@gmail.com>
   SPDX-License-Identifier: GPL-3.0-or-later
 -->
 <template>
@@ -33,6 +33,7 @@ export default {
   created() {
     const core = window.parent.core;
     this.setCoreInStore(core);
+
     const instanceName = /#\/apps\/([a-zA-Z0-9_-]+)/.exec(
       window.parent.location.hash
     )[1];
@@ -52,10 +53,12 @@ export default {
     );
 
     // configure global shortcuts
-    core.$root.$emit("configureKeyboardShortcuts", window);    const queryParams = this.getQueryParamsForApp();
-    const requestedPage = queryParams.page || "mail-webhooks";
+    core.$root.$emit("configureKeyboardShortcuts", window);
 
-    if (requestedPage != "mail-webhooks") {
+    const queryParams = this.getQueryParamsForApp();
+    const requestedPage = queryParams.page || "status";
+
+    if (requestedPage != "status") {
       this.$router.replace(requestedPage);
     }
   },
@@ -120,4 +123,5 @@ export default {
 
 <style lang="scss">
 @import "styles/carbon-utils";
+</style>
 </style>

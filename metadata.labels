@@ -1,0 +1,4 @@
+org.nethserver.authorizations=
+org.nethserver.tcp-ports-demand=1
+org.nethserver.rootfull=0
+org.nethserver.images=ghcr.io/leemlwando/ns8-mail-webhooks-server:latest

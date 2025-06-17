@@ -1,0 +1,14 @@
+[Unit]
+Description=Webhook Scheduler Service for %i
+After=default.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/.local/share/container/bin/webhook-scheduler
+WorkingDirectory=%h/.local/share/container
+EnvironmentFile=%h/.config/state/environment
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

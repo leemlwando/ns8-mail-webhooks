@@ -1,0 +1,77 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2025 Lee M. Lwando <leemlwando@gmail.com>
+#
+
+set -e
+
+MODULE_ID=${MODULE_ID:-webhooks1}
+
+case $1 in
+    module-init)
+        echo "Initializing mail webhooks module ${MODULE_ID}"
+        
+        # Create module-specific directories
+        mkdir -p "/home/${MODULE_ID}/.local/share/webhook-data"
+        mkdir -p "/home/${MODULE_ID}/.local/share/webhook-data/logs"
+        mkdir -p "/home/${MODULE_ID}/.config/state"
+        
+        # Set proper permissions
+        chown -R "${MODULE_ID}:${MODULE_ID}" "/home/${MODULE_ID}/.local/share/webhook-data" || true
+        
+        # Install systemd units
+        systemctl --user daemon-reload
+        
+        echo "Module ${MODULE_ID} initialized successfully"
+        ;;
+        
+    module-start)
+        echo "Starting mail webhooks module ${MODULE_ID}"
+        
+        # Start webhook server container
+        systemctl --user start webhook-server.service
+        
+        # Start event bridge
+        systemctl --user start webhook-event-bridge.service
+        
+        # Start scheduler
+        systemctl --user start webhook-scheduler.timer
+        
+        echo "Module ${MODULE_ID} started successfully"
+        ;;
+        
+    module-stop)
+        echo "Stopping mail webhooks module ${MODULE_ID}"
+        
+        # Stop all services
+        systemctl --user stop webhook-scheduler.timer 2>/dev/null || true
+        systemctl --user stop webhook-event-bridge.service 2>/dev/null || true
+        systemctl --user stop webhook-server.service 2>/dev/null || true
+        
+        echo "Module ${MODULE_ID} stopped successfully"
+        ;;
+        
+    module-remove)
+        echo "Removing mail webhooks module ${MODULE_ID}"
+        
+        # Stop and disable all services
+        systemctl --user disable --now webhook-scheduler.timer 2>/dev/null || true
+        systemctl --user disable --now webhook-event-bridge.service 2>/dev/null || true
+        systemctl --user disable --now webhook-server.service 2>/dev/null || true
+        
+        # Clean up module-specific data
+        rm -rf "/home/${MODULE_ID}/.local/share/webhook-data"
+        rm -f "/home/${MODULE_ID}/.config/state/environment"
+        rm -f "/home/${MODULE_ID}/.config/state/config.json"
+        
+        echo "Module ${MODULE_ID} removed successfully"
+        ;;
+        
+    *)
+        echo "Unknown event: $1"
+        exit 1
+        ;;
+esac
+
+echo "Event $1 completed for module ${MODULE_ID}"

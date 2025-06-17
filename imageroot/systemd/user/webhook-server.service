@@ -1,0 +1,31 @@
+[Unit]
+Description=Webhook Server Container for %i
+After=default.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStartPre=-/usr/bin/podman kill webhook-server-%i
+ExecStartPre=-/usr/bin/podman rm webhook-server-%i
+ExecStart=/usr/bin/podman run --rm \
+    --name webhook-server-%i \
+    --network=host \
+    --env-file=%h/.config/state/environment \
+    --volume %h/.local/share/webhook-data:/app/data:Z \
+    --memory-max=${API_MEMORY_LIMIT:-256M} \
+    --cpu-quota=50000 \
+    --restart=unless-stopped \
+    ghcr.io/leemlwando/ns8-mail-webhooks-server:latest
+ExecStop=/usr/bin/podman stop webhook-server-%i
+Restart=always
+RestartSec=10
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=%h/.local/share/webhook-data
+
+[Install]
+WantedBy=default.target

@@ -1,83 +1,99 @@
-# ns8-mail-webhooks
+# NS8 Mail Webhooks Module
 
-Mail webhooks module for NethServer 8, developed by Lee M. Lwando.
+A powerful webhook system for NethServer 8 that monitors mailboxes and delivers real-time notifications and scheduled batch processing.
 
-## Overview
+**Author:** Lee M. Lwando <leemlwando@gmail.com>  
+**Package:** leemlwando/ns8-mail-webhooks
 
-This module provides webhook functionality for mail events in NethServer 8.
+## Features
 
-## Install
+- **Real-time Webhooks**: Instant notifications for new messages, deletions, moves
+- **Scheduled Processing**: Batch processing of mailboxes with configurable intervals
+- **Multiple Authentication Methods**: Service accounts, user credentials, master user
+- **Secure Delivery**: HMAC signatures, SSL verification, API key support
+- **Message Actions**: Mark as read, delete, or move messages after processing
+- **Comprehensive Logging**: Full audit trail and delivery tracking
+- **High Performance**: Deno+Hono backend for efficient HTTP operations
 
-Instantiate the module with:
+## Architecture
 
-    add-module ghcr.io/leemlwando/ns8-mail-webhooks:latest 1
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   NS8 Actions   │───▶│   Deno+Hono API  │───▶│   External      │
+│   (Python)      │    │   (Webhook       │    │   Webhook       │
+└─────────────────┘    │   Processing)    │    │   Endpoints     │
+         │              └──────────────────┘    └─────────────────┘
+         │                       │
+         ▼                       ▼
+┌─────────────────┐    ┌──────────────────┐
+│   Mail Module   │    │   SQLite         │
+│   Integration   │    │   Database       │
+└─────────────────┘    └──────────────────┘
+```
 
-The output of the command will return the instance name.
-Output example:
+## Components
 
-    {"module_id": "ns8-mail-webhooks1", "image_name": "ns8-mail-webhooks", "image_url": "ghcr.io/leemlwando/ns8-mail-webhooks:latest"}
+- **Python Event Bridge**: Integrates with NS8 mail modules via Redis events
+- **Deno+Hono API Server**: High-performance webhook processing and delivery
+- **SQLite Database**: Webhook configurations and delivery logs
+- **Vue.js UI**: Modern web interface for configuration and monitoring
 
-## Configure
+## Installation
 
-Let's assume that the ns8-mail-webhooks instance is named `ns8-mail-webhooks1`.
+1. Install from NS8 App Store or build from source
+2. Configure mail module integration
+3. Create webhook endpoints
+4. Set up authentication credentials
+5. Monitor delivery status
 
-Launch `configure-module`, by setting the following parameters:
-- `<MODULE_PARAM1_NAME>`: <MODULE_PARAM1_DESCRIPTION>
-- `<MODULE_PARAM2_NAME>`: <MODULE_PARAM2_DESCRIPTION>
-- ...
+## Configuration
 
-Example:
+### Webhook Types
 
-    api-cli run module/ns8-mail-webhooks1/configure-module --data '{}'
+1. **Real-time Webhooks**: Triggered by mail events
+2. **Scheduled Webhooks**: Batch processing at intervals
 
-The above command will:
-- start and configure the ns8-mail-webhooks instance
-- (describe configuration process)
-- ...
+### Authentication Methods
 
-Send a test HTTP request to the mail-webhooks backend service:
+1. **Service Account**: Dedicated mail service credentials
+2. **User Credentials**: Individual user authentication
+3. **Master User**: Administrative account with impersonation
 
-    curl http://127.0.0.1/mail-webhooks/
+### Message Actions
 
-## Smarthost setting discovery
+- Mark messages as read after successful delivery
+- Delete processed messages
+- Move messages to specific folders
 
-Some configuration settings, like the smarthost setup, are not part of the
-`configure-module` action input: they are discovered by looking at some
-Redis keys.  To ensure the module is always up-to-date with the
-centralized [smarthost
-setup](https://nethserver.github.io/ns8-core/core/smarthost/) every time
-mail-webhooks starts, the command `bin/discover-smarthost` runs and refreshes
-the `state/smarthost.env` file with fresh values from Redis.
+## API Documentation
 
-Furthermore if smarthost setup is changed when mail-webhooks is already
-running, the event handler `events/smarthost-changed/10reload_services`
-restarts the main module service.
+The module exposes a REST API for webhook management:
 
-See also the `systemd/user/mail-webhooks.service` file.
+- `GET /api/webhooks` - List webhooks
+- `POST /api/webhooks` - Create webhook
+- `PUT /api/webhooks/:id` - Update webhook
+- `DELETE /api/webhooks/:id` - Delete webhook
+- `POST /api/webhooks/:id/test` - Test webhook delivery
 
-This setting discovery is just an example to understand how the module is
-expected to work: it can be rewritten or discarded completely.
+## Security
 
-## Uninstall
+- HMAC-SHA256 signatures for webhook verification
+- SSL/TLS encryption for all HTTP requests
+- API key authentication support
+- Host allowlist for webhook endpoints
+- Input validation and sanitization
 
-To uninstall the instance:
+## Monitoring
 
-    remove-module --no-preserve ns8-mail-webhooks1
+- Real-time service health monitoring
+- Delivery success/failure tracking
+- Performance metrics and statistics
+- Comprehensive logging with retention policies
 
-## Testing
+## License
 
-Test the module using the `test-module.sh` script:
+GPL-3.0 License
 
+## Support
 
-    ./test-module.sh <NODE_ADDR> ghcr.io/leemlwando/ns8-mail-webhooks:latest
-
-The tests are made using [Robot Framework](https://robotframework.org/)
-
-## UI translation
-
-Translated with [Weblate](https://hosted.weblate.org/projects/ns8/).
-
-To setup the translation process:
-
-- add [GitHub Weblate app](https://docs.weblate.org/en/latest/admin/continuous.html#github-setup) to your repository
-- add your repository to [hosted.weblate.org]((https://hosted.weblate.org) or ask a NethServer developer to add it to ns8 Weblate project
+For issues and support, please contact: leemlwando@gmail.com

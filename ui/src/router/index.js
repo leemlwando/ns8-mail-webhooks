@@ -1,26 +1,38 @@
 //
-// Copyright (C) 2023 Nethesis S.r.l.
+// Copyright (C) 2025 Lee M. Lwando <leemlwando@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 import Vue from "vue";
 import VueRouter from "vue-router";
 import Status from "../views/Status.vue";
 import Settings from "../views/Settings.vue";
-import MailWebhooks from "../views/MailWebhooks.vue";
+import Webhooks from "../views/Webhooks.vue";
+import ScheduledWebhooks from "../views/ScheduledWebhooks.vue";
+import Logs from "../views/Logs.vue";
 
 Vue.use(VueRouter);
 
 const routes = [
   {
     path: "/",
-    name: "MailWebhooks",
-    component: MailWebhooks,
-    alias: "/mail-webhooks", // important
-  },
-  {
-    path: "/status",
     name: "Status",
     component: Status,
+    alias: "/status", // important for NS8
+  },
+  {
+    path: "/webhooks",
+    name: "Webhooks",
+    component: Webhooks,
+  },
+  {
+    path: "/scheduled",
+    name: "ScheduledWebhooks",
+    component: ScheduledWebhooks,
+  },
+  {
+    path: "/logs",
+    name: "Logs",
+    component: Logs,
   },
   {
     path: "/settings",

@@ -1,5 +1,5 @@
 <!--
-  Copyright (C) 2023 Nethesis S.r.l.
+  Copyright (C) 2025 Lee M. Lwando <leemlwando@gmail.com>
   SPDX-License-Identifier: GPL-3.0-or-later
 -->
 <template>
@@ -43,41 +43,41 @@ export default {
   },
   beforeDestroy() {
     // remove event listener
-    this.$root.$off("toggleMobileSideMenu", this.toggleMobileSideMenu);
+    this.$root.$off("toggleMobileSideMenu");
   },
   methods: {
     toggleMobileSideMenu() {
       this.isMenuShown = !this.isMenuShown;
     },
     clickOutside() {
-      setTimeout(() => {
+      if (this.isClickOutsideEnabled) {
         this.isMenuShown = false;
-      }, 200);
+      }
     },
   },
 };
 </script>
 
 <style scoped lang="scss">
-@import "../styles/carbon-utils";
-
 .mobile-side-menu {
-  width: $side-menu-width;
-  height: calc(100vh - 3rem);
   position: fixed;
-  top: 3rem;
+  top: 0;
   left: 0;
-  z-index: 10000;
-  overflow: auto;
+  bottom: 0;
+  z-index: 9999;
+  background: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  max-width: 16rem;
+  width: 100%;
 }
 
 .slide-menu-enter-active,
 .slide-menu-leave-active {
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease;
 }
 
 .slide-menu-enter,
 .slide-menu-leave-to {
-  transform: translateX(-$side-menu-width);
+  transform: translateX(-100%);
 }
 </style>

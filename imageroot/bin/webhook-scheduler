@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+"""
+Webhook Scheduler for NS8 Mail Webhooks Module
+
+This script handles scheduled webhook executions.
+It checks for due scheduled webhooks and triggers them.
+
+Copyright (C) 2025 Lee M. Lwando <leemlwando@gmail.com>
+Licensed under GPL-3.0
+"""
+
+import os
+import sys
+import json
+import time
+import signal
+import logging
+import asyncio
+import aiohttp
+from typing import Dict, List, Optional, Any
+from datetime import datetime, timezone
+
+# Add pypkg to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'pypkg'))
+
+from config_manager import ConfigManager
+
+class WebhookScheduler:
+    """Handles scheduled webhook executions"""
+    
+    def __init__(self):
+        self.config_manager = ConfigManager()
+        self.running = False
+        self.webhook_api_url = None
+        
+        # Setup logging
+        log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
+        logging.basicConfig(
+            level=getattr(logging, log_level),
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        self.logger = logging.getLogger('webhook-scheduler')
+        
+    async def start(self):
+        """Start the scheduler"""
+        self.logger.info("Starting NS8 Mail Webhook Scheduler...")
+        
+        try:
+            # Load configuration
+            config = self.config_manager.get_config()
+            
+            # Get webhook API URL
+            api_port = os.environ.get('API_PORT', '3000')
+            self.webhook_api_url = f"http://localhost:{api_port}/api"
+            
+            self.logger.info(f"Webhook API URL: {self.webhook_api_url}")
+            
+            # Set up signal handlers
+            signal.signal(signal.SIGTERM, self._signal_handler)
+            signal.signal(signal.SIGINT, self._signal_handler)
+            
+            self.running = True
+            
+            # Start scheduling loop
+            await self._scheduling_loop()
+            
+        except Exception as e:
+            self.logger.error(f"Failed to start scheduler: {e}")
+            sys.exit(1)
+    
+    def _signal_handler(self, signum, frame):
+        """Handle shutdown signals"""
+        self.logger.info(f"Received signal {signum}, shutting down...")
+        self.running = False
+    
+    async def _scheduling_loop(self):
+        """Main scheduling loop"""
+        self.logger.info("Starting scheduling loop...")
+        
+        while self.running:
+            try:
+                # Check for due scheduled webhooks
+                await self._check_due_webhooks()
+                
+                # Wait before next check (check every minute)
+                await asyncio.sleep(60)
+                
+            except Exception as e:
+                self.logger.error(f"Error in scheduling loop: {e}")
+                await asyncio.sleep(60)  # Wait before retrying
+    
+    async def _check_due_webhooks(self):
+        """Check for scheduled webhooks that are due for execution"""
+        try:
+            self.logger.debug("Checking for due scheduled webhooks...")
+            
+            # Get all active scheduled webhooks
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{self.webhook_api_url}/scheduled-webhooks?active=true") as response:
+                    if response.status != 200:
+                        self.logger.error(f"Failed to get scheduled webhooks: {response.status}")
+                        return
+                    
+                    data = await response.json()
+                    if not data.get('success'):
+                        self.logger.error("API returned error getting scheduled webhooks")
+                        return
+                    
+                    scheduled_webhooks = data.get('data', [])
+                    
+            # Check each webhook to see if it's due
+            now = datetime.now(timezone.utc)
+            
+            for webhook in scheduled_webhooks:
+                if await self._is_webhook_due(webhook, now):
+                    await self._execute_scheduled_webhook(webhook)
+                    
+        except Exception as e:
+            self.logger.error(f"Error checking due webhooks: {e}")
+    
+    async def _is_webhook_due(self, webhook: Dict[str, Any], now: datetime) -> bool:
+        """Check if a scheduled webhook is due for execution"""
+        try:
+            next_run = webhook.get('next_run')
+            if not next_run:
+                return False
+            
+            # Parse next_run time
+            next_run_time = datetime.fromisoformat(next_run.replace('Z', '+00:00'))
+            
+            # Check if it's due (current time >= next_run time)
+            return now >= next_run_time
+            
+        except Exception as e:
+            self.logger.error(f"Error checking if webhook {webhook.get('id')} is due: {e}")
+            return False
+    
+    async def _execute_scheduled_webhook(self, webhook: Dict[str, Any]):
+        """Execute a scheduled webhook"""
+        try:
+            webhook_id = webhook['id']
+            self.logger.info(f"Executing scheduled webhook: {webhook['name']} ({webhook_id})")
+            
+            # Trigger the webhook via API
+            async with aiohttp.ClientSession() as session:
+                trigger_url = f"{self.webhook_api_url}/scheduled-webhooks/{webhook_id}/trigger"
+                async with session.post(trigger_url) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        if result.get('success'):
+                            self.logger.info(f"Successfully triggered scheduled webhook {webhook_id}")
+                            
+                            # Update next run time
+                            await self._update_next_run(webhook_id)
+                        else:
+                            self.logger.error(f"API error triggering webhook {webhook_id}: {result.get('error')}")
+                    else:
+                        self.logger.error(f"Failed to trigger webhook {webhook_id}: {response.status}")
+                        
+        except Exception as e:
+            self.logger.error(f"Error executing scheduled webhook {webhook.get('id')}: {e}")
+    
+    async def _update_next_run(self, webhook_id: str):
+        """Update the next run time for a scheduled webhook"""
+        try:
+            # The webhook service should handle updating next_run automatically
+            # when a webhook is triggered, but we can also call a specific endpoint
+            # if needed
+            
+            self.logger.debug(f"Next run time will be updated automatically for webhook {webhook_id}")
+            
+        except Exception as e:
+            self.logger.error(f"Error updating next run for webhook {webhook_id}: {e}")
+    
+    async def run_once(self):
+        """Run the scheduler once (for systemd timer)"""
+        self.logger.info("Running scheduled webhook check (one-time)...")
+        
+        try:
+            # Load configuration
+            config = self.config_manager.get_config()
+            
+            # Get webhook API URL
+            api_port = os.environ.get('API_PORT', '3000')
+            self.webhook_api_url = f"http://localhost:{api_port}/api"
+            
+            # Check for due webhooks
+            await self._check_due_webhooks()
+            
+            self.logger.info("Scheduled webhook check completed")
+            
+        except Exception as e:
+            self.logger.error(f"Error in one-time scheduler run: {e}")
+            sys.exit(1)
+
+async def main():
+    """Main entry point"""
+    scheduler = WebhookScheduler()
+    
+    # Check if running as one-time execution (via systemd timer)
+    if '--once' in sys.argv:
+        await scheduler.run_once()
+    else:
+        await scheduler.start()
+
+if __name__ == '__main__':
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Shutdown requested by user")
+    except Exception as e:
+        print(f"Fatal error: {e}")
+        sys.exit(1)

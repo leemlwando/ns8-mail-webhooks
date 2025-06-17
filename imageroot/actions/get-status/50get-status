@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+
+"""
+Get Status Action for NS8 Mail Webhooks
+
+Copyright (C) 2025 Lee M. Lwando <leemlwando@gmail.com>
+Licensed under GPL-3.0
+"""
+
+import json
+import sys
+import os
+import requests
+import agent
+from datetime import datetime, timedelta
+
+module_id = os.environ.get('MODULE_ID', 'webhooks1')
+
+def check_deno_api_health():
+    """Check Deno API health"""
+    try:
+        # Get API port from configuration
+        env_config = {}
+        try:
+            env_config = agent.read_envfile(f'/home/{module_id}/.config/state/environment')
+        except:
+            pass
+        
+        api_port = env_config.get('API_PORT', '3000')
+        
+        response = requests.get(
+            f'http://localhost:{api_port}/health', 
+            timeout=5
+        )
+        
+        if response.ok:
+            health_data = response.json()
+            return {
+                'status': 'healthy',
+                'response_time': health_data.get('response_time', 0),
+                'message': 'Deno API is responding',
+                'version': health_data.get('version'),
+                'uptime': health_data.get('uptime')
+            }
+        else:
+            return {
+                'status': 'error',
+                'message': f'API returned {response.status_code}',
+                'response_time': None
+            }
+    except Exception as e:
+        return {
+            'status': 'error',
+            'message': f'API unreachable: {str(e)}',
+            'response_time': None
+        }
+
+def check_service_status(service_name):
+    """Check systemd service status"""
+    try:
+        result = agent.run_helper(
+            'systemctl', '--user', 'is-active', service_name,
+            capture_output=True
+        )
+        
+        if result.returncode == 0:
+            return 'running'
+        else:
+            return 'stopped'
+    except:
+        return 'unknown'
+
+def get_webhook_statistics():
+    """Get webhook statistics from Deno API"""
+    try:
+        env_config = {}
+        try:
+            env_config = agent.read_envfile(f'/home/{module_id}/.config/state/environment')
+        except:
+            pass
+        
+        api_port = env_config.get('API_PORT', '3000')
+        
+        response = requests.get(
+            f'http://localhost:{api_port}/api/statistics',
+            timeout=10
+        )
+        
+        if response.ok:
+            return response.json()
+        else:
+            return {
+                'total_webhooks': 0,
+                'active_webhooks': 0,
+                'deliveries_24h': 0,
+                'success_rate': 0
+            }
+    except:
+        return {
+            'total_webhooks': 0,
+            'active_webhooks': 0,
+            'deliveries_24h': 0,
+            'success_rate': 0
+        }
+
+def get_recent_activity():
+    """Get recent activity from logs"""
+    try:
+        env_config = {}
+        try:
+            env_config = agent.read_envfile(f'/home/{module_id}/.config/state/environment')
+        except:
+            pass
+        
+        api_port = env_config.get('API_PORT', '3000')
+        
+        response = requests.get(
+            f'http://localhost:{api_port}/api/activity/recent',
+            timeout=10
+        )
+        
+        if response.ok:
+            return response.json().get('activities', [])
+        else:
+            return []
+    except:
+        return []
+
+def main():
+    try:
+        # Check service statuses
+        webhook_service_status = check_service_status('webhook-server.service')
+        event_bridge_status = check_service_status('webhook-event-bridge.service')
+        scheduler_status = check_service_status('webhook-scheduler.timer')
+        
+        # Check Deno API health
+        deno_health = check_deno_api_health()
+        deno_status = 'healthy' if deno_health['status'] == 'healthy' else 'error'
+        
+        # Get statistics
+        statistics = get_webhook_statistics()
+        
+        # Get recent activity
+        recent_activity = get_recent_activity()
+        
+        # Compile health details
+        health_details = [
+            {
+                'component': 'Webhook Server Container',
+                'status': 'healthy' if webhook_service_status == 'running' else 'error',
+                'message': f'Service is {webhook_service_status}',
+                'timestamp': datetime.now().isoformat()
+            },
+            {
+                'component': 'Event Bridge Service', 
+                'status': 'healthy' if event_bridge_status == 'running' else 'error',
+                'message': f'Service is {event_bridge_status}',
+                'timestamp': datetime.now().isoformat()
+            },
+            {
+                'component': 'Webhook Scheduler',
+                'status': 'healthy' if scheduler_status == 'running' else 'error',
+                'message': f'Timer is {scheduler_status}',
+                'timestamp': datetime.now().isoformat()
+            },
+            {
+                'component': 'Deno API Server',
+                'status': deno_health['status'],
+                'message': deno_health['message'],
+                'timestamp': datetime.now().isoformat(),
+                'response_time': deno_health.get('response_time')
+            }
+        ]
+        
+        # Overall module status
+        module_status = {
+            'webhook_service': webhook_service_status,
+            'deno_api': deno_status,
+            'event_bridge': event_bridge_status,
+            'scheduler': scheduler_status
+        }
+        
+        json.dump({
+            'status': 'success',
+            'module_status': module_status,
+            'statistics': statistics,
+            'health_details': health_details,
+            'recent_activity': recent_activity
+        }, sys.stdout)
+        
+    except Exception as e:
+        json.dump({
+            'status': 'error',
+            'error': str(e)
+        }, sys.stdout)
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()

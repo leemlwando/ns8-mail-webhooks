@@ -1,9 +1,8 @@
 {
-  "name": "ns8-mail-webhooks",
-  "description": {
-    "en": "Mail webhooks module for NethServer 8"
-  },
-  "categories": [],
+  "name": "Mail Webhooks",
+  "description": "Real-time and scheduled webhook notifications for mail events",
+  "logo": "./img/logo.svg",
+  "categories": ["mail", "notifications", "webhooks"],
   "authors": [
     {
       "name": "Lee M. Lwando",
@@ -11,9 +10,9 @@
     }
   ],
   "docs": {
-    "documentation_url": "https://github.com/leemlwando/ns8-mail-webhooks",
-    "bug_url": "https://github.com/leemlwando/ns8-mail-webhooks/issues",
-    "code_url": "https://github.com/leemlwando/ns8-mail-webhooks"
+    "documentation_url": "https://github.com/leemlwando/ns8-mail-webooks",
+    "bug_url": "https://github.com/leemlwando/ns8-mail-webooks/issues",
+    "code_url": "https://github.com/leemlwando/ns8-mail-webooks"
   },
-  "source": "ghcr.io/leemlwando/ns8-mail-webhooks"
+  "source": "ghcr.io/leemlwando/ns8-mail-webooks"
 }
