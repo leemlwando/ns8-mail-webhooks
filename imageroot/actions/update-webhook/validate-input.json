@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "update-webhook input",
+  "description": "Update an existing mail webhook",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Webhook ID",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "description": "Webhook name",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "url": {
+      "type": "string",
+      "description": "Webhook URL endpoint",
+      "format": "uri"
+    },
+    "mailbox": {
+      "type": "string",
+      "description": "Target mailbox (empty for all mailboxes)"
+    },
+    "trigger_type": {
+      "type": "string",
+      "description": "When to trigger the webhook",
+      "enum": ["new_email", "email_read", "email_deleted", "email_moved"]
+    },
+    "enabled": {
+      "type": "boolean",
+      "description": "Whether webhook is enabled"
+    },
+    "auth_token": {
+      "type": "string",
+      "description": "Authentication token to include in requests"
+    },
+    "custom_headers": {
+      "type": "object",
+      "description": "Custom headers to include in webhook requests",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "filters": {
+      "type": "object",
+      "description": "Email filters to apply",
+      "properties": {
+        "from_contains": {
+          "type": "string",
+          "description": "Filter by sender containing this text"
+        },
+        "subject_contains": {
+          "type": "string",
+          "description": "Filter by subject containing this text"
+        },
+        "body_contains": {
+          "type": "string",
+          "description": "Filter by body containing this text"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["id"],
+  "additionalProperties": false
+}

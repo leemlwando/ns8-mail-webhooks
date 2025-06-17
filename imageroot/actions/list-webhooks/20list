@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2024 KSM Management Consultants
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import os
+import requests
+import agent
+
+def get_webhook_server_url():
+    """Get the webhook server URL from environment or default"""
+    return os.getenv("WEBHOOK_SERVER_URL", "http://127.0.0.1:8080")
+
+def list_webhooks():
+    """List all configured webhooks from the webhook server"""
+    try:
+        webhook_server_url = get_webhook_server_url()
+        response = requests.get(f"{webhook_server_url}/api/v1/webhooks", timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            # Transform the data to match NS8 UI expectations
+            webhooks = []
+            for webhook in data.get('webhooks', []):
+                webhooks.append({
+                    'id': webhook.get('id'),
+                    'name': webhook.get('name'),
+                    'url': webhook.get('url'),
+                    'mailbox': webhook.get('mailbox'),
+                    'trigger_type': webhook.get('trigger_type'),
+                    'enabled': webhook.get('enabled', True),
+                    'created_at': webhook.get('created_at'),
+                    'last_triggered': webhook.get('last_triggered')
+                })
+            return webhooks
+        else:
+            print(f"Failed to fetch webhooks: HTTP {response.status_code}", file=sys.stderr)
+            return []
+    except Exception as ex:
+        print(f"Error connecting to webhook server: {ex}", file=sys.stderr)
+        return []
+
+try:
+    webhooks = list_webhooks()
+    json.dump(webhooks, fp=sys.stdout)
+except Exception as ex:
+    print(f"Error listing webhooks: {ex}", file=sys.stderr)
+    sys.exit(1)

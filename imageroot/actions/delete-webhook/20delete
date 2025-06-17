@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2024 KSM Management Consultants
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import os
+import subprocess
+
+def get_webhook_server_url():
+    """Get the webhook server URL from environment or default"""
+    return os.getenv("WEBHOOK_SERVER_URL", "http://127.0.0.1:8080")
+
+def delete_webhook(webhook_id):
+    """Delete a webhook via the webhook server"""
+    try:
+        webhook_server_url = get_webhook_server_url()
+        
+        # Use curl to make the request
+        cmd = [
+            'curl', '-X', 'DELETE',
+            f'{webhook_server_url}/api/v1/webhooks/{webhook_id}',
+            '--connect-timeout', '10'
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        
+        if result.returncode == 0:
+            return {"success": True, "message": "Webhook deleted successfully"}
+        else:
+            raise Exception(f"HTTP request failed: {result.stderr}")
+    except Exception as ex:
+        raise Exception(f"Error deleting webhook: {ex}")
+
+try:
+    request = json.load(sys.stdin)
+    
+    # Validate required fields
+    if 'id' not in request:
+        print("Missing required field: id", file=sys.stderr)
+        sys.exit(1)
+    
+    webhook_id = request['id']
+    result = delete_webhook(webhook_id)
+    json.dump(result, fp=sys.stdout)
+    
+except Exception as ex:
+    print(f"Error: {ex}", file=sys.stderr)
+    sys.exit(1)

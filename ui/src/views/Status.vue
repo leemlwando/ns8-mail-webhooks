@@ -295,7 +295,6 @@
 <script>
 import to from "await-to-js";
 import { mapState } from "vuex";
-import axios from "axios";
 import {
   QueryParamService,
   TaskService,
@@ -566,32 +565,97 @@ export default {
         }
       }      this.backups = backups;
       this.loading.listBackups = false;
-    },
-    async getBackendHealth() {
+    },    async getBackendHealth() {
       this.loading.backendHealth = true;
       this.error.backendHealth = "";
       
-      try {
-        const res = await axios.get('/api/health');
-        this.backendHealth = res.data;
-      } catch (error) {
-        this.error.backendHealth = error.response?.data?.detail || error.message || "Failed to get backend health";
+      const taskAction = "get-webhook-stats";
+      const eventId = this.getUuid();
+
+      // Register to task completion
+      this.core.$root.$once(
+        `${taskAction}-completed-${eventId}`,
+        this.getBackendHealthCompleted
+      );
+
+      const res = await to(
+        this.createModuleTaskForApp(this.instanceName, {
+          action: taskAction,
+          data: { health_check: true },
+          extra: {
+            title: this.$t("action." + taskAction),
+            isNotificationHidden: true,
+            eventId,
+          },
+        })
+      );
+      const err = res[0];
+
+      if (err) {
+        console.error(`error creating task ${taskAction}`, err);
+        this.error.backendHealth = this.getErrorMessage(err);
+        this.loading.backendHealth = false;
+        return;
       }
-      
+    },
+    getBackendHealthCompleted(taskContext, taskResult) {
       this.loading.backendHealth = false;
+      
+      const err = taskResult.error;
+      if (err) {
+        this.error.backendHealth = err.message || "Failed to get backend health";
+        this.backendHealth = null;
+        return;
+      }
+
+      // Process the health result
+      this.backendHealth = taskResult.output?.health || { status: 'unknown' };
     },
     async getBackendStats() {
       this.loading.backendStats = true;
       this.error.backendStats = "";
       
-      try {
-        const res = await axios.get('/api/stats');
-        this.backendStats = res.data;
-      } catch (error) {
-        this.error.backendStats = error.response?.data?.detail || error.message || "Failed to get backend stats";
+      const taskAction = "get-webhook-stats";
+      const eventId = this.getUuid();
+
+      // Register to task completion
+      this.core.$root.$once(
+        `${taskAction}-stats-completed-${eventId}`,
+        this.getBackendStatsCompleted
+      );
+
+      const res = await to(
+        this.createModuleTaskForApp(this.instanceName, {
+          action: taskAction,
+          data: { global_stats: true },
+          extra: {
+            title: this.$t("action." + taskAction),
+            isNotificationHidden: true,
+            eventId: `stats-${eventId}`,
+          },
+        })
+      );
+      const err = res[0];
+
+      if (err) {
+        console.error(`error creating task ${taskAction}`, err);
+        this.error.backendStats = this.getErrorMessage(err);
+        this.loading.backendStats = false;
+        return;
       }
-      
+    },
+    getBackendStatsCompleted(taskContext, taskResult) {
       this.loading.backendStats = false;
+      
+      const err = taskResult.error;
+      if (err) {
+        this.error.backendStats = err.message || "Failed to get backend stats";
+        this.backendStats = null;
+        return;
+      }
+
+      // Process the stats result
+      this.backendStats = taskResult.output?.stats || {};
     },
   },
 };

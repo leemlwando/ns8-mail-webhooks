@@ -1,13 +1,13 @@
 #
-# Copyright (C) 2023 Nethesis S.r.l.
+# Copyright (C) 2024 KSM Management Consultants
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
 #
-# This systemd unit starts a mail-webhooks instance using Podman.
+# This systemd unit starts a mail-webhooks server instance using Podman.
 #
 [Unit]
-Description=Mail Webhook Service
+Description=Mail Webhooks Server
 After=network-online.target
 Wants=network-online.target
 
@@ -24,11 +24,11 @@ ExecStart=/usr/bin/podman run \
     --cidfile=%t/mail-webhooks.ctr-id \
     --cgroups=no-conmon \
     --replace --name=%N \
-    --publish=127.0.0.1:${TCP_PORT}:8080 \
+    --publish=127.0.0.1:8080:8080 \
     --env-file=%S/state/environment \
-    --volume=%S/state/data:/var/lib/nethserver/mail-webhook:Z \
+    --volume=%S/state/data:/app/data:Z \
     --log-driver=journald \
-    ${MAIL_WEBHOOK_IMAGE}
+    ${WEBHOOK_SERVER_IMAGE}
 ExecStop=/usr/bin/podman stop --ignore --cidfile %t/mail-webhooks.ctr-id -t 10
 ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/mail-webhooks.ctr-id
 PIDFile=%t/mail-webhooks.pid

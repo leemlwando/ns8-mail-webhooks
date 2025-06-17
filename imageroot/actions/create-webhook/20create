@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2024 KSM Management Consultants
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import os
+import subprocess
+
+def get_webhook_server_url():
+    """Get the webhook server URL from environment or default"""
+    return os.getenv("WEBHOOK_SERVER_URL", "http://127.0.0.1:8080")
+
+def create_webhook(data):
+    """Create a new webhook via the webhook server"""
+    try:
+        webhook_server_url = get_webhook_server_url()
+        
+        # Use curl to make the request
+        cmd = [
+            'curl', '-X', 'POST',
+            f'{webhook_server_url}/api/v1/webhooks',
+            '-H', 'Content-Type: application/json',
+            '-d', json.dumps(data),
+            '--connect-timeout', '10'
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        
+        if result.returncode == 0:
+            response_data = json.loads(result.stdout)
+            return response_data
+        else:
+            raise Exception(f"HTTP request failed: {result.stderr}")
+    except Exception as ex:
+        raise Exception(f"Error creating webhook: {ex}")
+
+try:
+    request = json.load(sys.stdin)
+    
+    # Validate required fields
+    required_fields = ['name', 'url', 'trigger_type']
+    for field in required_fields:
+        if field not in request:
+            print(f"Missing required field: {field}", file=sys.stderr)
+            sys.exit(1)
+    
+    # Create the webhook
+    webhook_data = {
+        'name': request['name'],
+        'url': request['url'],
+        'mailbox': request.get('mailbox', ''),
+        'trigger_type': request['trigger_type'],
+        'enabled': request.get('enabled', True),
+        'auth_token': request.get('auth_token', ''),
+        'custom_headers': request.get('custom_headers', {}),
+        'filters': request.get('filters', {})
+    }
+    
+    result = create_webhook(webhook_data)
+    json.dump(result, fp=sys.stdout)
+    
+except Exception as ex:
+    print(f"Error: {ex}", file=sys.stderr)
+    sys.exit(1)

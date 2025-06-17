@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "delete-webhook input",
+  "description": "Delete a mail webhook",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Webhook ID to delete",
+      "minLength": 1
+    }
+  },
+  "required": ["id"],
+  "additionalProperties": false
+}

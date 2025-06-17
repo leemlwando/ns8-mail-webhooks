@@ -1,103 +1,80 @@
 #!/usr/bin/env python3
 
 #
-# Copyright (C) 2023 Nethesis S.r.l.
+# Copyright (C) 2024 KSM Management Consultants
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
 import json
 import sys
 import agent
-import agent.tasks
 import os
-import uuid
-
-def create_directories():
-    """Create required directory structure"""
-    directories = ['state', 'state/data']
-    
-    for directory in directories:
-        os.makedirs(directory, exist_ok=True)
-        print(f"Created directory: {directory}")
-
-def create_environment_file():
-    """Create environment configuration file"""
-    # Generate unique module identifier
-    module_uuid = str(uuid.uuid4())
-    
-    # Get configuration values
-    tcp_port = os.environ.get("TCP_PORT", "8080")
-    image_name = os.environ.get("MAIL_WEBHOOK_IMAGE", "ghcr.io/nethserver/mail-webhook:latest")
-    module_id = os.environ.get("MODULE_ID", "mail-webhook")
-    
-    # Create environment configuration
-    env_config = {
-        'MAIL_WEBHOOK_IMAGE': image_name,
-        'TCP_PORT': tcp_port,
-        'MODULE_ID': module_id,
-        'MODULE_UUID': module_uuid,
-        'DATABASE_PATH': '/var/lib/nethserver/mail-webhook/webhooks.db',
-        'LOG_LEVEL': 'INFO',
-        'CHECK_INTERVAL': '60',
-        'IMAP_HOST': os.environ.get('MAIL_SERVER', 'localhost'),
-        'IMAP_PORT': '993',
-        'IMAP_SSL': 'true',
-        'MAIL_ADMIN_USER': os.environ.get('MAIL_ADMIN_USER', 'admin'),
-        'MAIL_ADMIN_PASS': os.environ.get('MAIL_ADMIN_PASS', ''),
-        'WEBHOOK_TIMEOUT': '30',
-        'MAX_RETRIES': '3',
-        'MAX_EMAILS_PER_BATCH': '50',
-        'BATCH_PROCESSING_DELAY': '1000',
-    }
-    
-    # Write environment file
-    env_path = 'state/environment'
-    with open(env_path, 'w') as f:
-        for key, value in env_config.items():
-            f.write(f'{key}={value}\n')
-    
-    # Set secure permissions
-    os.chmod(env_path, 0o600)
-    print(f"Created environment file: {env_path}")
-
-def configure_traefik_routing():
-    """Configure Traefik HTTP routing"""
-    tcp_port = os.environ.get("TCP_PORT", "8080")
-    module_id = os.environ.get("MODULE_ID", "mail-webhook")
-    
-    # Configure Traefik to route requests to the mail-webhooks service
-    response = agent.tasks.run(
-        agent_id=agent.resolve_agent_id('traefik@node'),
-        action='set-route',
-        data={
-            'instance': module_id,
-            'url': f'http://127.0.0.1:{tcp_port}',
-            'http2https': True,
-            'lets_encrypt': True,
-            'path': '/mail-webhooks',
-        },
-    )
-    
-    # Validate Traefik configuration
-    agent.assert_exp(response['exit_code'] == 0, "Failed to configure Traefik routing")
-    print(f"Configured Traefik route for /mail-webhooks -> 127.0.0.1:{tcp_port}")
 
 def main():
     """Main configuration function"""
     try:
-        # Read input configuration if provided
+        # Read input configuration
         request = json.load(sys.stdin)
     except json.JSONDecodeError:
         request = {}
     
-    print("Starting module configuration...")
+    print("Starting mail webhook module configuration...")
     
-    # Execute configuration steps
-    create_directories()
-    create_environment_file()
-    configure_traefik_routing()
-    
-    print("Module configuration completed successfully")
+    # Set environment variables based on configuration
+    if 'webhook_server_enabled' in request:
+        agent.set_env("WEBHOOK_SERVER_ENABLED", str(request['webhook_server_enabled']).lower())
+    else:
+        agent.set_env("WEBHOOK_SERVER_ENABLED", "true")
+
+    if 'webhook_server_url' in request:
+        agent.set_env("WEBHOOK_SERVER_URL", request['webhook_server_url'])
+    else:
+        # Default webhook server URL
+        agent.set_env("WEBHOOK_SERVER_URL", "http://127.0.0.1:8080")
+
+    if 'webhook_server_image' in request:
+        agent.set_env("WEBHOOK_SERVER_IMAGE", request['webhook_server_image'])
+    else:
+        # Default webhook server image
+        agent.set_env("WEBHOOK_SERVER_IMAGE", "ghcr.io/leemlwando/ns8-mail-webhooks-server:latest")
+
+    # IMAP configuration for webhook server
+    if 'imap_server' in request:
+        agent.set_env("IMAP_SERVER", request['imap_server'])
+    else:
+        agent.set_env("IMAP_SERVER", "localhost")
+
+    if 'imap_port' in request:
+        agent.set_env("IMAP_PORT", str(request['imap_port']))
+    else:
+        agent.set_env("IMAP_PORT", "993")
+
+    if 'imap_username' in request:
+        agent.set_env("IMAP_USERNAME", request['imap_username'])
+
+    if 'imap_password' in request:
+        agent.set_env("IMAP_PASSWORD", request['imap_password'])
+
+    # Database configuration for webhook server
+    if 'mongodb_url' in request:
+        agent.set_env("MONGODB_URL", request['mongodb_url'])
+    else:
+        # Default MongoDB URL
+        agent.set_env("MONGODB_URL", "mongodb://127.0.0.1:27017/webhooks")
+
+    if 'redis_url' in request:
+        agent.set_env("REDIS_URL", request['redis_url'])
+    else:
+        # Default Redis URL
+        agent.set_env("REDIS_URL", "redis://127.0.0.1:6379")
+
+    # Debug mode
+    if 'debug' in request:
+        agent.set_env("DEBUG", str(request['debug']).lower())
+    else:
+        agent.set_env("DEBUG", "false")
+
+    print("Mail webhook module configuration completed successfully")
 
 if __name__ == "__main__":
     main()
