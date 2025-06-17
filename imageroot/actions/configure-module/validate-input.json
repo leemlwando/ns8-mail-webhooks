@@ -4,11 +4,10 @@
   "$id": "http://schema.nethserver.org/mail-webhooks/configure-module-input.json",
   "description": "Configure Mail Webhooks module",
   "type": "object",
-  "properties": {
-    "mongodb_url": {
+  "properties": {    "mongodb_url": {
       "type": "string",
       "description": "MongoDB connection URL (required)",
-      "pattern": "^mongodb://.+",
+      "pattern": "^mongodb(\\+srv)?://.+",
       "examples": [
         "mongodb://user:password@host:27017/database",
         "mongodb+srv://user:password@cluster.mongodb.net/database"

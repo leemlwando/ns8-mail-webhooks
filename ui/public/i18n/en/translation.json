@@ -22,9 +22,8 @@
     },    "settings": {
         "title": "Settings",
         "configure_instance": "Configure {instance}",
-        "save": "Save",
-        "mongodb_url": "MongoDB Connection URL",
-        "mongodb_url_placeholder": "mongodb://user:password@host:27017/database",
+        "save": "Save",        "mongodb_url": "MongoDB Connection URL",
+        "mongodb_url_placeholder": "mongodb://... or mongodb+srv://...",
         "mail_server_uuid": "Mail Server UUID",
         "mail_server_uuid_placeholder": "Optional - UUID of the mail server to integrate with",
         "collection_names": "Collection Names (Advanced)",
