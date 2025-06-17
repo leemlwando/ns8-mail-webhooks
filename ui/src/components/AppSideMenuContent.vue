@@ -11,9 +11,8 @@
         v-else
         :width="instanceNameSkeletonWidth"
       ></cv-skeleton-text>
-    </div>
-
-    <cv-side-nav-items>      <cv-side-nav-link
+    </div>    <cv-side-nav-items>
+      <cv-side-nav-link
         @click="goToAppPage(instanceName, 'status')"
         :class="{ 'current-page': isLinkActive('status') }"
       >
@@ -53,11 +52,11 @@ import { mapState } from "vuex";
 import { QueryParamService, UtilService } from "@nethserver/ns8-ui-lib";
 
 export default {
-  name: "AppSideMenuContent",  components: {
+  name: "AppSideMenuContent",
+  components: {
     Settings20,
     Information20,
     Activity20,
-    API20,
   },
   mixins: [QueryParamService, UtilService],
   data() {

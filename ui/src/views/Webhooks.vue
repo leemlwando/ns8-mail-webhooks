@@ -83,9 +83,8 @@
                 </cv-data-table-cell>
               </cv-data-table-row>
             </template>
-          </cv-data-table>
-
-          <!-- Empty State -->          <NsEmptyState
+          </cv-data-table>          <!-- Empty State -->
+          <NsEmptyState
             v-else-if="!loading.listWebhooks && webhooks.length === 0"
             :title="$t('webhooks.no_webhooks')"
             :description="$t('webhooks.no_webhooks_description')"
@@ -143,8 +142,8 @@
       @primary-click="deleteWebhook"
       @modal-hidden="showDeleteModal = false"
       :primary-button-disabled="loading.deleteWebhook"
-    >
-      <template slot="title">{{ $t("webhooks.delete_webhook") }}</template>      <template slot="content">
+    >      <template slot="title">{{ $t("webhooks.delete_webhook") }}</template>
+      <template slot="content">
         <p>{{ $t("webhooks.confirm_delete") }}</p>
         <p><strong>{{ webhookToDelete && webhookToDelete.name }}</strong></p>
       </template>
@@ -187,7 +186,8 @@
 import {
   QueryParamService,
   TaskService,
-  UtilService,  NsEmptyState,
+  UtilService,
+  NsEmptyState,
   NsModal,
   NsInlineNotification,
 } from "@nethserver/ns8-ui-lib";
@@ -196,7 +196,8 @@ import to from "await-to-js";
 import { mapState } from "vuex";
 
 export default {
-  name: "Webhooks",  components: {
+  name: "Webhooks",
+  components: {
     WebhookForm,
     NsEmptyState,
     NsModal,
