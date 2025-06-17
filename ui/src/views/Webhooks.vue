@@ -146,10 +146,9 @@
       @modal-hidden="showDeleteModal = false"
       :primary-button-disabled="loading.deleteWebhook"
     >
-      <template slot="title">{{ $t("webhooks.delete_webhook") }}</template>
-      <template slot="content">
+      <template slot="title">{{ $t("webhooks.delete_webhook") }}</template>      <template slot="content">
         <p>{{ $t("webhooks.confirm_delete") }}</p>
-        <p><strong>{{ webhookToDelete?.name }}</strong></p>
+        <p><strong>{{ webhookToDelete && webhookToDelete.name }}</strong></p>
       </template>
     </NsModal>
 
