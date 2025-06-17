@@ -1,19 +1,19 @@
 {
-  "name": "kickstart",
+  "name": "mail-webhooks",
   "description": {
-    "en": "My kickstart module"
+    "en": "Mail Webhooks - Webhook triggers for incoming mail"
   },
-  "categories": [],
+  "categories": ["mail"],
   "authors": [
     {
-      "name": "Name Surname",
-      "email": "author@yourmail.org"
+      "name": "KSM Management Consultants",
+      "email": "info@ksmconsultants.com"
     }
   ],
   "docs": {
-    "documentation_url": "https://docs.kickstart.com/",
-    "bug_url": "https://github.com/NethServer/dev",
-    "code_url": "https://github.com/author/ns8-kickstart"
+    "documentation_url": "https://github.com/author/ns8-mail-webhooks",
+    "bug_url": "https://github.com/author/ns8-mail-webhooks/issues",
+    "code_url": "https://github.com/author/ns8-mail-webhooks"
   },
-  "source": "ghcr.io/nethserver/kickstart"
+  "source": "ghcr.io/nethserver/ns8-mail-webhooks"
 }
