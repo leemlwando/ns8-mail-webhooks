@@ -7,6 +7,18 @@
 
 # If the control reaches this step, the service can be enabled and started
 
+echo "Starting mail-webhooks service configuration..." >&2
+
+# Create required files
 touch smarthost.env
 
+echo "Environment variables in current context:" >&2
+env | grep -E "(MONGODB|MAIL_|WEBHOOKS|EVENTS|SETTINGS|TRIGGERS|LOGS)" >&2
+
+echo "Enabling and starting mail-webhooks.service..." >&2
 systemctl --user enable --now mail-webhooks.service
+
+echo "Checking service status..." >&2
+systemctl --user status mail-webhooks.service --no-pager >&2
+
+echo "Service startup completed" >&2

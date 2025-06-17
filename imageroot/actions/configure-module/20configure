@@ -11,12 +11,20 @@ import agent
 import agent.tasks
 import os
 
-request = json.load(sys.stdin)
+try:
+    request = json.load(sys.stdin)
+except json.JSONDecodeError as e:
+    print(f"Error: Invalid JSON input: {e}", file=sys.stderr)
+    sys.exit(1)
+
+print(f"Received configuration request: {request}", file=sys.stderr)
 
 # Validate required configuration
 if "mongodb_url" not in request:
     print("Error: mongodb_url is required for configuration", file=sys.stderr)
     sys.exit(1)
+
+print(f"Setting environment variables...", file=sys.stderr)
 
 # Set MongoDB URL from request
 agent.set_env("MONGODB_URL", request["mongodb_url"])
@@ -32,7 +40,10 @@ agent.set_env("SETTINGS_COLLECTION", request.get("settings_collection", "setting
 agent.set_env("TRIGGERS_COLLECTION", request.get("triggers_collection", "triggers"))
 agent.set_env("LOGS_COLLECTION", request.get("logs_collection", "logs"))
 
+print(f"Environment variables set successfully", file=sys.stderr)
+
 # Configure Traefik to route "/mail-webhooks" path requests to the service
+print(f"Configuring Traefik route...", file=sys.stderr)
 response = agent.tasks.run(
     agent_id=agent.resolve_agent_id('traefik@node'),
     action='set-route',
@@ -47,6 +58,7 @@ response = agent.tasks.run(
 
 # Check if traefik configuration has been successful
 agent.assert_exp(response['exit_code'] == 0)
+print(f"Traefik route configured successfully", file=sys.stderr)
 
 print(f"Mail Webhooks module configured successfully")
 print(f"MongoDB URL: {request['mongodb_url']}")
