@@ -1,0 +1,37 @@
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+#
+# Mail Webhooks API service
+#
+[Unit]
+Description=Mail Webhooks API server
+After=network.target
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+EnvironmentFile=%S/state/environment
+WorkingDirectory=%S/state
+Restart=always
+ExecStartPre=/bin/rm -f %t/mail-webhooks.pid %t/mail-webhooks.ctr-id
+ExecStart=/usr/bin/podman run \
+    --detach \
+    --conmon-pidfile=%t/mail-webhooks.pid \
+    --cidfile=%t/mail-webhooks.ctr-id \
+    --cgroups=no-conmon \
+    --replace --name=%N \
+    --publish=127.0.0.1:${TCP_PORT}:8080 \
+    --volume=./api:/app:Z \
+    --env=MONGODB_URL=${MONGODB_URL} \
+    --env=MAIL_SERVER_UUID=${MAIL_SERVER_UUID} \
+    --workdir=/app \
+    python:3.11-slim bash -c "pip install -r requirements.txt && uvicorn app:app --host 0.0.0.0 --port 8080"
+ExecStop=/usr/bin/podman stop --ignore --cidfile %t/mail-webhooks.ctr-id -t 10
+ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/mail-webhooks.ctr-id
+PIDFile=%t/mail-webhooks.pid
+Type=forking
+
+[Install]
+WantedBy=default.target

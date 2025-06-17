@@ -8,7 +8,16 @@
 import json
 import sys
 import agent
+import os
 
-config = {}
+config = {
+    "mongodb_url": agent.get_env("MONGODB_URL", ""),
+    "mail_server_uuid": agent.get_env("MAIL_SERVER_UUID", ""),
+    "webhooks_collection": agent.get_env("WEBHOOKS_COLLECTION", "webhooks"),
+    "events_collection": agent.get_env("EVENTS_COLLECTION", "events"),
+    "settings_collection": agent.get_env("SETTINGS_COLLECTION", "settings"),
+    "triggers_collection": agent.get_env("TRIGGERS_COLLECTION", "triggers"),
+    "logs_collection": agent.get_env("LOGS_COLLECTION", "logs")
+}
 
 json.dump(config, fp=sys.stdout)

@@ -1,99 +1,126 @@
-# ns8-kickstart
+# ns8-mail-webhooks
 
-This is a template module for [NethServer 8](https://github.com/NethServer/ns8-core).
-To start a new module from it:
+Mail Webhooks module for [NethServer 8](https://github.com/NethServer/ns8-core) that provides webhook triggers for incoming mail events.
 
-1. Click on [Use this template](https://github.com/NethServer/ns8-kickstart/generate).
-   Name your repo with `ns8-` prefix (e.g. `ns8-mymodule`). 
-   Do not end your module name with a number, like ~~`ns8-baaad2`~~!
+## Features
 
-1. Clone the repository, enter the cloned directory and
-   [configure your GIT identity](https://git-scm.com/book/en/v2/Getting-Started-First-Time-Git-Setup#_your_identity)
-
-1. Rename some references inside the repo:
-   ```
-   modulename=$(basename $(pwd) | sed 's/^ns8-//')
-   git mv imageroot/systemd/user/kickstart.service imageroot/systemd/user/${modulename}.service
-   git mv tests/kickstart.robot tests/${modulename}.robot
-   sed -i "s/kickstart/${modulename}/g" $(find .github/ * -type f)
-   git commit -a -m "Repository initialization"
-   ```
-
-1. Edit this `README.md` file, by replacing this section with your module
-   description
-
-1. Adjust `.github/workflows` to your needs. `clean-registry.yml` might
-   need the proper list of image names to work correctly. Unused workflows
-   can be disabled from the GitHub Actions interface.
-
-1. Commit and push your local changes
+- **Webhook Management**: Create, update, delete and test webhooks
+- **Multiple Trigger Types**: Real-time and interval-based triggers
+- **Payload Formats**: Support for RAW and JSON payload types
+- **Mail Integration**: Integrates with ns8-mail module for mailbox access
+- **External MongoDB**: Uses external MongoDB instance (no self-hosted database)
 
 ## Install
 
 Instantiate the module with:
 
-    add-module ghcr.io/nethserver/kickstart:latest 1
+    add-module ghcr.io/nethserver/mail-webhooks:latest 1
 
 The output of the command will return the instance name.
 Output example:
 
-    {"module_id": "kickstart1", "image_name": "kickstart", "image_url": "ghcr.io/nethserver/kickstart:latest"}
+    {"module_id": "mail-webhooks1", "image_name": "mail-webhooks", "image_url": "ghcr.io/nethserver/mail-webhooks:latest"}
 
 ## Configure
 
-Let's assume that the kickstart instance is named `kickstart1`.
+Let's assume that the mail-webhooks instance is named `mail-webhooks1`.
 
 Launch `configure-module`, by setting the following parameters:
-- `<MODULE_PARAM1_NAME>`: <MODULE_PARAM1_DESCRIPTION>
-- `<MODULE_PARAM2_NAME>`: <MODULE_PARAM2_DESCRIPTION>
-- ...
+- `mongodb_url`: MongoDB connection URL (required)
+- `mail_server_uuid`: UUID of the mail server to integrate with (optional)
+- `webhooks_collection`: MongoDB collection name for webhooks (default: "webhooks")
+- `events_collection`: MongoDB collection name for mail events (default: "events")  
+- `settings_collection`: MongoDB collection name for settings (default: "settings")
+- `triggers_collection`: MongoDB collection name for triggers (default: "triggers")
+- `logs_collection`: MongoDB collection name for logs (default: "logs")
+- `http2https`: enable or disable HTTP to HTTPS redirection (true/false)
+- `lets_encrypt`: enable or disable Let's Encrypt certificate (true/false)
 
 Example:
 
-    api-cli run module/kickstart1/configure-module --data '{}'
+```bash
+api-cli run configure-module --agent module/mail-webhooks1 --data - <<EOF
+{
+  "mongodb_url": "mongodb://user:password@mongo.example.com:27017/mailwebhooks",
+  "mail_server_uuid": "24c52316-5af5-4b4d-8b0f-734f9ee9c1d9",
+  "webhooks_collection": "my_webhooks",
+  "events_collection": "my_events",
+  "triggers_collection": "my_triggers",
+  "logs_collection": "my_logs",
+  "http2https": true,
+  "lets_encrypt": false
+}
+EOF
+```
+
+### Collection Names
+
+The module allows you to customize the MongoDB collection names used for data storage. This is useful when:
+- Multiple instances need to share the same MongoDB database
+- You want to organize data with custom naming conventions
+- Integration with existing systems requires specific collection names
+
+All collection names must follow MongoDB naming rules:
+- Start with a letter or underscore
+- Contain only letters, numbers, and underscores
+- Cannot be empty
+
+If collection names are not specified, the module uses these defaults:
+- `webhooks` - for webhook configurations
+- `events` - for mail events and webhook execution logs
+- `settings` - for module settings
+- `triggers` - for trigger scheduling information
+- `logs` - for execution logs and debugging information
 
 The above command will:
-- start and configure the kickstart instance
-- (describe configuration process)
-- ...
+- Configure the module to use the specified MongoDB instance
+- Set up integration with the specified mail server  
+- Use custom collection names for data organization
+- Configure Traefik routing for the web interface
 
-Send a test HTTP request to the kickstart backend service:
+## Get the configuration
 
-    curl http://127.0.0.1/kickstart/
+You can retrieve the configuration with:
 
-## Smarthost setting discovery
+```bash
+api-cli run get-configuration --agent module/mail-webhooks1 --data null | jq
+```
 
-Some configuration settings, like the smarthost setup, are not part of the
-`configure-module` action input: they are discovered by looking at some
-Redis keys.  To ensure the module is always up-to-date with the
-centralized [smarthost
-setup](https://nethserver.github.io/ns8-core/core/smarthost/) every time
-kickstart starts, the command `bin/discover-smarthost` runs and refreshes
-the `state/smarthost.env` file with fresh values from Redis.
+## API Endpoints
 
-Furthermore if smarthost setup is changed when kickstart is already
-running, the event handler `events/smarthost-changed/10reload_services`
-restarts the main module service.
+The module provides a REST API for webhook management:
 
-See also the `systemd/user/kickstart.service` file.
-
-This setting discovery is just an example to understand how the module is
-expected to work: it can be rewritten or discarded completely.
+- `GET /health` - Service health check
+- `GET /api/webhooks` - List all webhooks
+- `POST /api/webhooks` - Create new webhook
+- `GET /api/webhooks/{id}` - Get webhook details
+- `PUT /api/webhooks/{id}` - Update webhook
+- `DELETE /api/webhooks/{id}` - Delete webhook
+- `POST /api/webhooks/{id}/test` - Test webhook
+- `GET /api/settings` - Get settings
+- `PUT /api/settings` - Update settings
 
 ## Uninstall
 
 To uninstall the instance:
 
-    remove-module --no-preserve kickstart1
+    remove-module --no-preserve mail-webhooks1
+
+## Development Status
+
+This module is currently in development. Phase 1 (Backend Foundation) is complete with a FastAPI-based REST API for webhook management, including support for custom MongoDB collection names.
 
 ## Testing
 
 Test the module using the `test-module.sh` script:
 
-
-    ./test-module.sh <NODE_ADDR> ghcr.io/nethserver/kickstart:latest
+    ./test-module.sh <NODE_ADDR> ghcr.io/nethserver/mail-webhooks:latest
 
 The tests are made using [Robot Framework](https://robotframework.org/)
+
+Test collection configuration:
+
+    python test-collection-config.py
 
 ## UI translation
 

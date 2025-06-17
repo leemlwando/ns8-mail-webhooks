@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 #
-# Copyright (C) 2023 Nethesis S.r.l.
+# Copyright (C) 2025 Nethesis S.r.l.
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
@@ -13,22 +13,42 @@ import os
 
 request = json.load(sys.stdin)
 
-# TODO: do something with the request payload. For example configure a
-# custom route in our web router. Here the path is hardcoded as
-# 'kickstart'.
+# Validate required configuration
+if "mongodb_url" not in request:
+    print("Error: mongodb_url is required for configuration", file=sys.stderr)
+    sys.exit(1)
 
-# Configure Traefik to route "/kickstart" path requests to the kickstart service
+# Set MongoDB URL from request
+agent.set_env("MONGODB_URL", request["mongodb_url"])
+
+# Set mail server UUID if provided
+if "mail_server_uuid" in request:
+    agent.set_env("MAIL_SERVER_UUID", request["mail_server_uuid"])
+
+# Set collection names with defaults
+agent.set_env("WEBHOOKS_COLLECTION", request.get("webhooks_collection", "webhooks"))
+agent.set_env("EVENTS_COLLECTION", request.get("events_collection", "events"))
+agent.set_env("SETTINGS_COLLECTION", request.get("settings_collection", "settings"))
+agent.set_env("TRIGGERS_COLLECTION", request.get("triggers_collection", "triggers"))
+agent.set_env("LOGS_COLLECTION", request.get("logs_collection", "logs"))
+
+# Configure Traefik to route "/mail-webhooks" path requests to the service
 response = agent.tasks.run(
     agent_id=agent.resolve_agent_id('traefik@node'),
     action='set-route',
     data={
         'instance': os.environ['MODULE_ID'],
-        'url':  'http://127.0.0.1:' + os.environ["TCP_PORT"],
-        'http2https': False,
-        'lets_encrypt': False,
-        'path': '/kickstart',
+        'url': 'http://127.0.0.1:' + os.environ["TCP_PORT"],
+        'http2https': request.get('http2https', False),
+        'lets_encrypt': request.get('lets_encrypt', False),
+        'path': '/mail-webhooks',
     },
 )
 
-# Check if traefik configuration has been successfull
+# Check if traefik configuration has been successful
 agent.assert_exp(response['exit_code'] == 0)
+
+print(f"Mail Webhooks module configured successfully")
+print(f"MongoDB URL: {request['mongodb_url']}")
+print(f"Collection names: webhooks={request.get('webhooks_collection', 'webhooks')}, events={request.get('events_collection', 'events')}, settings={request.get('settings_collection', 'settings')}, triggers={request.get('triggers_collection', 'triggers')}, logs={request.get('logs_collection', 'logs')}")
+print(f"Access URL: https://<server>/mail-webhooks")

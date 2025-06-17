@@ -19,12 +19,22 @@
         "no_services": "No services",
         "no_images": "No images",
         "no_volumes": "No volumes"
-    },
-    "settings": {
+    },    "settings": {
         "title": "Settings",
         "configure_instance": "Configure {instance}",
         "save": "Save",
-        "test_field": "Test field"
+        "mongodb_url": "MongoDB Connection URL",
+        "mongodb_url_placeholder": "mongodb://user:password@host:27017/database",
+        "mail_server_uuid": "Mail Server UUID",
+        "mail_server_uuid_placeholder": "Optional - UUID of the mail server to integrate with",
+        "collection_names": "Collection Names (Advanced)",
+        "webhooks_collection": "Webhooks Collection",
+        "events_collection": "Events Collection",
+        "settings_collection": "Settings Collection",
+        "triggers_collection": "Triggers Collection",
+        "logs_collection": "Logs Collection",
+        "invalid_mongodb_url": "Invalid MongoDB URL. Must start with mongodb:// or mongodb+srv://",
+        "invalid_collection_name": "Invalid collection name. Must start with a letter or underscore and contain only letters, numbers, and underscores."
     },
     "about": {
         "title": "About"

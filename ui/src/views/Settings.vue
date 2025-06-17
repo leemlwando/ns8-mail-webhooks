@@ -20,18 +20,96 @@
       </cv-column>
     </cv-row>
     <cv-row>
-      <cv-column>
-        <cv-tile light>
+      <cv-column>        <cv-tile light>
           <cv-form @submit.prevent="configureModule">
-            <!-- TODO remove test field and code configuration fields -->
+            <!-- MongoDB Configuration -->
             <cv-text-input
-              :label="$t('settings.test_field')"
-              v-model="testField"
-              :placeholder="$t('settings.test_field')"
+              :label="$t('settings.mongodb_url')"
+              v-model="mongodb_url"
+              :placeholder="$t('settings.mongodb_url_placeholder')"
               :disabled="loading.getConfiguration || loading.configureModule"
-              :invalid-message="error.testField"
-              ref="testField"
+              :invalid-message="error.mongodb_url"
+              ref="mongodb_url"
+              type="password"
             ></cv-text-input>
+
+            <!-- Mail Server UUID -->
+            <cv-text-input
+              :label="$t('settings.mail_server_uuid')"
+              v-model="mail_server_uuid"
+              :placeholder="$t('settings.mail_server_uuid_placeholder')"
+              :disabled="loading.getConfiguration || loading.configureModule"
+              :invalid-message="error.mail_server_uuid"
+              ref="mail_server_uuid"
+            ></cv-text-input>
+
+            <!-- Collection Names Section -->
+            <cv-accordion>
+              <cv-accordion-item>
+                <template slot="title">{{ $t('settings.collection_names') }}</template>
+                <template slot="content">
+                  <cv-row>
+                    <cv-column>
+                      <cv-text-input
+                        :label="$t('settings.webhooks_collection')"
+                        v-model="webhooks_collection"
+                        :placeholder="'webhooks'"
+                        :disabled="loading.getConfiguration || loading.configureModule"
+                        :invalid-message="error.webhooks_collection"
+                        ref="webhooks_collection"
+                      ></cv-text-input>
+                    </cv-column>
+                    <cv-column>
+                      <cv-text-input
+                        :label="$t('settings.events_collection')"
+                        v-model="events_collection"
+                        :placeholder="'events'"
+                        :disabled="loading.getConfiguration || loading.configureModule"
+                        :invalid-message="error.events_collection"
+                        ref="events_collection"
+                      ></cv-text-input>
+                    </cv-column>
+                  </cv-row>
+                  <cv-row>
+                    <cv-column>
+                      <cv-text-input
+                        :label="$t('settings.settings_collection')"
+                        v-model="settings_collection"
+                        :placeholder="'settings'"
+                        :disabled="loading.getConfiguration || loading.configureModule"
+                        :invalid-message="error.settings_collection"
+                        ref="settings_collection"
+                      ></cv-text-input>
+                    </cv-column>
+                    <cv-column>
+                      <cv-text-input
+                        :label="$t('settings.triggers_collection')"
+                        v-model="triggers_collection"
+                        :placeholder="'triggers'"
+                        :disabled="loading.getConfiguration || loading.configureModule"
+                        :invalid-message="error.triggers_collection"
+                        ref="triggers_collection"
+                      ></cv-text-input>
+                    </cv-column>
+                  </cv-row>
+                  <cv-row>
+                    <cv-column>
+                      <cv-text-input
+                        :label="$t('settings.logs_collection')"
+                        v-model="logs_collection"
+                        :placeholder="'logs'"
+                        :disabled="loading.getConfiguration || loading.configureModule"
+                        :invalid-message="error.logs_collection"
+                        ref="logs_collection"
+                      ></cv-text-input>
+                    </cv-column>
+                    <cv-column>
+                      <!-- Empty column for layout balance -->
+                    </cv-column>
+                  </cv-row>
+                </template>
+              </cv-accordion-item>
+            </cv-accordion>
             <cv-row v-if="error.configureModule">
               <cv-column>
                 <NsInlineNotification
@@ -78,14 +156,19 @@ export default {
   ],
   pageTitle() {
     return this.$t("settings.title") + " - " + this.appName;
-  },
-  data() {
+  },  data() {
     return {
       q: {
         page: "settings",
       },
       urlCheckInterval: null,
-      testField: "", // TODO remove
+      mongodb_url: "",
+      mail_server_uuid: "",
+      webhooks_collection: "webhooks",
+      events_collection: "events",
+      settings_collection: "settings",
+      triggers_collection: "triggers",
+      logs_collection: "logs",
       loading: {
         getConfiguration: false,
         configureModule: false,
@@ -93,8 +176,13 @@ export default {
       error: {
         getConfiguration: "",
         configureModule: "",
-        testField: "", // TODO remove
-        // TODO add all validation error fields
+        mongodb_url: "",
+        mail_server_uuid: "",
+        webhooks_collection: "",
+        events_collection: "",
+        settings_collection: "",
+        triggers_collection: "",
+        logs_collection: "",
       },
     };
   },
@@ -156,34 +244,62 @@ export default {
       console.error(`${taskContext.action} aborted`, taskResult);
       this.error.getConfiguration = this.$t("error.generic_error");
       this.loading.getConfiguration = false;
-    },
-    getConfigurationCompleted(taskContext, taskResult) {
+    },    getConfigurationCompleted(taskContext, taskResult) {
       this.loading.getConfiguration = false;
       const config = taskResult.output;
 
-      // TODO set configuration fields
-      // ...
+      // Set configuration fields
+      this.mongodb_url = config.mongodb_url || "";
+      this.mail_server_uuid = config.mail_server_uuid || "";
+      this.webhooks_collection = config.webhooks_collection || "webhooks";
+      this.events_collection = config.events_collection || "events";
+      this.settings_collection = config.settings_collection || "settings";
+      this.triggers_collection = config.triggers_collection || "triggers";
+      this.logs_collection = config.logs_collection || "logs";
 
-      // TODO remove
       console.log("config", config);
 
-      // TODO focus first configuration field
-      this.focusElement("testField");
-    },
-    validateConfigureModule() {
+      // Focus first configuration field
+      this.focusElement("mongodb_url");
+    },    validateConfigureModule() {
       this.clearErrors(this);
       let isValidationOk = true;
 
-      // TODO remove testField and validate configuration fields
-      if (!this.testField) {
-        // test field cannot be empty
-        this.error.testField = this.$t("common.required");
-
+      // MongoDB URL is required
+      if (!this.mongodb_url) {
+        this.error.mongodb_url = this.$t("common.required");
         if (isValidationOk) {
-          this.focusElement("testField");
+          this.focusElement("mongodb_url");
+          isValidationOk = false;
+        }
+      } else if (!this.mongodb_url.startsWith("mongodb://") && !this.mongodb_url.startsWith("mongodb+srv://")) {
+        this.error.mongodb_url = this.$t("settings.invalid_mongodb_url");
+        if (isValidationOk) {
+          this.focusElement("mongodb_url");
           isValidationOk = false;
         }
       }
+
+      // Validate collection names (must be valid MongoDB collection names)
+      const collectionNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+      const collections = [
+        { field: 'webhooks_collection', value: this.webhooks_collection },
+        { field: 'events_collection', value: this.events_collection },
+        { field: 'settings_collection', value: this.settings_collection },
+        { field: 'triggers_collection', value: this.triggers_collection },
+        { field: 'logs_collection', value: this.logs_collection }
+      ];
+
+      for (const collection of collections) {
+        if (collection.value && !collectionNamePattern.test(collection.value)) {
+          this.error[collection.field] = this.$t("settings.invalid_collection_name");
+          if (isValidationOk) {
+            this.focusElement(collection.field);
+            isValidationOk = false;
+          }
+        }
+      }
+
       return isValidationOk;
     },
     configureModuleValidationFailed(validationErrors) {
@@ -230,13 +346,17 @@ export default {
       this.core.$root.$once(
         `${taskAction}-completed-${eventId}`,
         this.configureModuleCompleted
-      );
-
-      const res = await to(
+      );      const res = await to(
         this.createModuleTaskForApp(this.instanceName, {
           action: taskAction,
           data: {
-            // TODO configuration fields
+            mongodb_url: this.mongodb_url,
+            mail_server_uuid: this.mail_server_uuid || undefined,
+            webhooks_collection: this.webhooks_collection || "webhooks",
+            events_collection: this.events_collection || "events", 
+            settings_collection: this.settings_collection || "settings",
+            triggers_collection: this.triggers_collection || "triggers",
+            logs_collection: this.logs_collection || "logs",
           },
           extra: {
             title: this.$t("settings.configure_instance", {

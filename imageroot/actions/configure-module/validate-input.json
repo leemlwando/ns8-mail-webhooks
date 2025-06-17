@@ -1,8 +1,65 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "configure-module input",
-    "$id": "http://schema.nethserver.org/kickstart/configure-module-input.json",
-    "description": "Configure kickstart",
-    "examples": [],
-    "type": "object"
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "configure-module input",
+  "$id": "http://schema.nethserver.org/mail-webhooks/configure-module-input.json",
+  "description": "Configure Mail Webhooks module",
+  "type": "object",
+  "properties": {
+    "mongodb_url": {
+      "type": "string",
+      "description": "MongoDB connection URL (required)",
+      "pattern": "^mongodb://.+",
+      "examples": [
+        "mongodb://user:password@host:27017/database",
+        "mongodb+srv://user:password@cluster.mongodb.net/database"
+      ]
+    },
+    "mail_server_uuid": {
+      "type": "string",
+      "description": "UUID of the mail server to integrate with (optional)",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "webhooks_collection": {
+      "type": "string",
+      "description": "MongoDB collection name for webhooks (default: webhooks)",
+      "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+      "default": "webhooks"
+    },
+    "events_collection": {
+      "type": "string",
+      "description": "MongoDB collection name for mail events (default: events)",
+      "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+      "default": "events"
+    },
+    "settings_collection": {
+      "type": "string",
+      "description": "MongoDB collection name for settings (default: settings)",
+      "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+      "default": "settings"
+    },
+    "triggers_collection": {
+      "type": "string",
+      "description": "MongoDB collection name for triggers (default: triggers)",
+      "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+      "default": "triggers"
+    },
+    "logs_collection": {
+      "type": "string",
+      "description": "MongoDB collection name for logs (default: logs)",
+      "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+      "default": "logs"
+    },
+    "http2https": {
+      "type": "boolean",
+      "description": "Enable HTTP to HTTPS redirection",
+      "default": false
+    },
+    "lets_encrypt": {
+      "type": "boolean", 
+      "description": "Enable Let's Encrypt SSL certificate",
+      "default": false
+    }
+  },
+  "required": ["mongodb_url"],
+  "additionalProperties": false
 }
