@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2023 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import os
+import agent
+
+def validate_environment():
+    """Validate required environment variables"""
+    required_vars = {
+        'MODULE_ID': 'Module identifier',
+        'TCP_PORT': 'HTTP port for service',
+    }
+    
+    missing_vars = []
+    for var, description in required_vars.items():
+        if not os.getenv(var):
+            missing_vars.append(f"{var} ({description})")
+    
+    if missing_vars:
+        agent.set_weight(os.path.basename(__file__), 0)
+        print(f"Missing required environment variables: {', '.join(missing_vars)}", file=sys.stderr)
+        sys.exit(1)
+
+def validate_input(data):
+    """Validate input configuration data"""
+    if not isinstance(data, dict):
+        return
+    
+    # Validate webhook configurations if provided
+    if 'webhook_configs' in data:
+        for i, config in enumerate(data['webhook_configs']):
+            if not isinstance(config, dict):
+                continue
+                
+            # Validate webhook URL
+            webhook_url = config.get('webhook_url', '')
+            if webhook_url and not webhook_url.startswith(('http://', 'https://')):
+                print(f"Invalid webhook URL format in config {i}: {webhook_url}", file=sys.stderr)
+                sys.exit(1)
+            
+            # Validate mailbox format
+            mailbox = config.get('mailbox', '')
+            if mailbox and '@' not in mailbox:
+                print(f"Invalid mailbox format in config {i}: {mailbox}", file=sys.stderr)
+                sys.exit(1)
+
+def main():
+    try:
+        # Read input data
+        data = json.load(sys.stdin)
+    except json.JSONDecodeError:
+        # No input data is acceptable
+        data = {}
+    
+    # Validate environment
+    validate_environment()
+    
+    # Validate input data
+    validate_input(data)
+    
+    print("Validation completed successfully")
+
+if __name__ == "__main__":
+    main()

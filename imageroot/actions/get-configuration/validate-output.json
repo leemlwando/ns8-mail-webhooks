@@ -1,7 +1,108 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "get-configuration output",    "$id": "http://schema.nethserver.org/mail-webhooks/get-configuration-output.json",
-    "description": "Get mail-webhooks configuration",
-    "examples": [],
-    "type": "object"
+    "title": "get-configuration output",
+    "$id": "http://schema.nethserver.org/mail-webhooks/get-configuration-output.json",
+    "description": "Current module configuration",
+    "type": "object",
+    "properties": {
+        "imap_config": {
+            "type": "object",
+            "properties": {
+                "host": {
+                    "type": "string",
+                    "description": "IMAP server hostname"
+                },
+                "port": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535,
+                    "description": "IMAP server port"
+                },
+                "use_ssl": {
+                    "type": "boolean",
+                    "description": "Use SSL/TLS encryption"
+                },
+                "admin_user": {
+                    "type": "string",
+                    "description": "Admin username"
+                }
+            },
+            "required": ["host", "port", "use_ssl"],
+            "additionalProperties": false
+        },
+        "webhook_defaults": {
+            "type": "object",
+            "properties": {
+                "timeout": {
+                    "type": "integer",
+                    "minimum": 5,
+                    "maximum": 300,
+                    "description": "Default webhook timeout in seconds"
+                },
+                "max_retries": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10,
+                    "description": "Default maximum retry attempts"
+                },
+                "validate_ssl": {
+                    "type": "boolean",
+                    "description": "Validate SSL certificates by default"
+                }
+            },
+            "required": ["timeout", "max_retries", "validate_ssl"],
+            "additionalProperties": false
+        },
+        "performance": {
+            "type": "object",
+            "properties": {
+                "max_emails_per_batch": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000,
+                    "description": "Maximum emails to process in one batch"
+                },
+                "batch_processing_delay": {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 10000,
+                    "description": "Delay between batches in milliseconds"
+                },
+                "connection_pool_size": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20,
+                    "description": "Maximum concurrent IMAP connections"
+                }
+            },
+            "required": ["max_emails_per_batch", "batch_processing_delay", "connection_pool_size"],
+            "additionalProperties": false
+        },
+        "logging": {
+            "type": "object",
+            "properties": {
+                "level": {
+                    "type": "string",
+                    "enum": ["DEBUG", "INFO", "WARN", "ERROR"],
+                    "description": "Log level"
+                },
+                "retention_days": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365,
+                    "description": "Log retention period in days"
+                },
+                "max_file_size_mb": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "description": "Maximum log file size in MB"
+                }
+            },
+            "required": ["level", "retention_days", "max_file_size_mb"],
+            "additionalProperties": false
+        }
+    },
+    "required": ["imap_config", "webhook_defaults", "performance", "logging"],
+    "additionalProperties": false
 }
