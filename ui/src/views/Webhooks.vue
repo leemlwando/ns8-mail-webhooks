@@ -85,12 +85,10 @@
             </template>
           </cv-data-table>
 
-          <!-- Empty State -->
-          <NsEmptyState
+          <!-- Empty State -->          <NsEmptyState
             v-else-if="!loading.listWebhooks && webhooks.length === 0"
             :title="$t('webhooks.no_webhooks')"
             :description="$t('webhooks.no_webhooks_description')"
-            :icon="API32"
           >
             <template #action>
               <cv-button
@@ -189,20 +187,16 @@
 import {
   QueryParamService,
   TaskService,
-  UtilService,
-  NsEmptyState,
+  UtilService,  NsEmptyState,
   NsModal,
   NsInlineNotification,
 } from "@nethserver/ns8-ui-lib";
-import API32 from "@carbon/icons-vue/es/API/32";
 import WebhookForm from "../components/WebhookForm.vue";
 import to from "await-to-js";
 import { mapState } from "vuex";
 
 export default {
-  name: "Webhooks",
-  components: {
-    API32,
+  name: "Webhooks",  components: {
     WebhookForm,
     NsEmptyState,
     NsModal,
