@@ -15,5 +15,5 @@
     "bug_url": "https://github.com/NethServer/ns8-mail-webhooks/issues",
     "code_url": "https://github.com/NethServer/ns8-mail-webhooks"
   },
-  "source": "ghcr.io/nethserver/mail-webhooks"
+  "source": "ghcr.io/nethserver/mail-webhooks:dev-v2"
 }
