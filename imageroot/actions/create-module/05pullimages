@@ -20,26 +20,16 @@ except:
 print(f"Received images to pull: {images}", file=sys.stderr)
 
 # This module uses external MongoDB (not self-hosted) and builds backend image locally
-# Skip pulling backend image since it will be built during configure phase
-filtered_images = []
-for image in images:
-    if 'mail-webhooks-backend' in image:
-        print(f"Skipping backend image (will be built locally): {image}", file=sys.stderr)
-        # Set environment variable for later use in configure phase
-        agent.set_env("MAIL_WEBHOOKS_BACKEND_IMAGE", image)
-    else:
-        # For any other external images, add them to the list to pull
-        filtered_images.append(image)
-
-if filtered_images:
-    print(f"Pulling external images: {filtered_images}", file=sys.stderr)
+# No external images need to be pulled
+if images:
+    print(f"External images specified: {images}", file=sys.stderr)
     try:
-        agent.run_helper('podman-pull-missing', *filtered_images).check_returncode()
+        agent.run_helper('podman-pull-missing', *images).check_returncode()
         print("Successfully pulled external images", file=sys.stderr)
     except Exception as ex:
-        print(f"Error pulling images: {ex}", file=sys.stderr)
+        print(f"Error pulling external images: {ex}", file=sys.stderr)
         sys.exit(1)
 else:
-    print("No external images to pull", file=sys.stderr)
+    print("No external images to pull - backend will be built locally", file=sys.stderr)
 
 print("Image pulling completed successfully", file=sys.stderr)

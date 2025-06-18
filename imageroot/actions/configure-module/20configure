@@ -44,7 +44,7 @@ agent.set_env("LOGS_COLLECTION", request.get("logs_collection", "logs"))
 agent.set_env("BACKEND_URL", f"http://127.0.0.1:{os.environ['TCP_PORT']}")
 
 # Set backend image for systemd service
-agent.set_env("MAIL_WEBHOOKS_BACKEND_IMAGE", "ghcr.io/leemlwando/mail-webhooks-backend:latest")
+agent.set_env("MAIL_WEBHOOKS_BACKEND_IMAGE", "localhost/mail-webhooks-backend:latest")
 
 print(f"Environment variables set successfully", file=sys.stderr)
 
@@ -65,6 +65,9 @@ response = agent.tasks.run(
 # Check if traefik configuration has been successful
 agent.assert_exp(response['exit_code'] == 0)
 print(f"Traefik route configured successfully", file=sys.stderr)
+
+# Ensure all environment variables are persisted
+agent.dump_env()
 
 print(f"Mail Webhooks module configured successfully")
 print(f"MongoDB URL: {request['mongodb_url']}")

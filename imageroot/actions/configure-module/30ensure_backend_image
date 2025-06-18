@@ -1,0 +1,44 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+set -e
+exec 1>&2
+
+# Use a local image tag (not a registry URL) for the backend image
+BACKEND_IMAGE="localhost/mail-webhooks-backend:latest"
+
+echo "Ensuring backend image is available: ${BACKEND_IMAGE}"
+
+# Always build the backend image locally (don't try to pull it)
+echo "Building backend image from source..."
+
+# Build the backend image using the Containerfile in the api directory
+cd /imageroot/api
+
+echo "Building backend image with tag: ${BACKEND_IMAGE}"
+if podman build -t "${BACKEND_IMAGE}" .; then
+    echo "Successfully built backend image: ${BACKEND_IMAGE}"
+else
+    echo "Error: Failed to build backend image"
+    exit 1
+fi
+
+# Verify the image was created
+if podman image exists "${BACKEND_IMAGE}"; then
+    echo "Backend image verified: ${BACKEND_IMAGE}"
+    # Show image info for debugging
+    podman image inspect "${BACKEND_IMAGE}" --format "{{.Id}}" | head -c 12
+    echo " - Image created successfully"
+else
+    echo "Error: Backend image was not created properly"
+    exit 1
+fi
+
+# Set the environment variable for the systemd service to use
+echo "Backend image configuration is handled in the main configure step"
+
+echo "Backend image check completed successfully"

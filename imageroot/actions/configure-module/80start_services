@@ -15,13 +15,16 @@ touch smarthost.env
 echo "Environment variables in current context:" >&2
 env | grep -E "(MONGODB|MAIL_|WEBHOOKS|EVENTS|SETTINGS|TRIGGERS|LOGS)" >&2
 
+# Backend image should have been built by 30ensure_backend_image
+echo "Backend image should be ready (built by 30ensure_backend_image)..." >&2
+
 echo "Enabling and starting mail-webhooks.service..." >&2
 systemctl --user enable --now mail-webhooks.service
 
 echo "Checking service status..." >&2
 systemctl --user status mail-webhooks.service --no-pager >&2
 
-# Auto-start mail monitor if MongoDB is configured (Phase 2 - disabled for now)
+# Mail monitor service disabled for Phase 1 (API-only implementation)
 if false; then  # [[ -n "${MONGODB_URL}" ]]; then
     echo "Starting mail monitor service..." >&2
     systemctl --user enable --now mail-monitor.service || true
