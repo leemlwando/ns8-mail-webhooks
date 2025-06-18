@@ -21,7 +21,7 @@ container=$(buildah from scratch)
 # Reuse existing nodebuilder-mailwebhooks container, to speed up builds
 if ! buildah containers --format "{{.ContainerName}}" | grep -q nodebuilder-mailwebhooks; then
     echo "Pulling NodeJS runtime..."
-    buildah from --name nodebuilder-mailwebhooks -v "${PWD}:/usr/src:Z" docker.io/library/node:22.16.0-slim
+    buildah from --name nodebuilder-mailwebhooks -v "${PWD}:/usr/src:Z" docker.io/library/node:18-slim
 fi
 
 echo "Build static UI files with node..."
@@ -30,13 +30,6 @@ buildah run \
     --env="NODE_OPTIONS=--openssl-legacy-provider" \
     nodebuilder-mailwebhooks \
     sh -c "yarn install && yarn build"
-
-# Ensure all action scripts are executable before adding to container
-echo "Setting executable permissions on action scripts..."
-find imageroot/actions -type f -name "[0-9]*" -exec chmod +x {} \; 2>/dev/null || true
-find imageroot/bin -type f -exec chmod +x {} \; 2>/dev/null || true
-# Also ensure shell scripts are executable
-find imageroot -name "*.sh" -type f -exec chmod +x {} \; 2>/dev/null || true
 
 # Add imageroot directory to the container image
 buildah add "${container}" imageroot /imageroot
@@ -47,21 +40,14 @@ buildah config --entrypoint=/ \
     --label="org.nethserver.authorizations=traefik@node:routeadm" \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
+    --label="org.nethserver.images=" \
     "${container}"
+
 # Commit the image
 buildah commit "${container}" "${repobase}/${reponame}"
 
 # Append the image URL to the images array
 images+=("${repobase}/${reponame}")
-
-#
-# Build backend API container image
-#
-reponame_backend="mail-webhooks-backend"
-container_backend=$(buildah build -f imageroot/api/Containerfile -t "${repobase}/${reponame_backend}" imageroot/api)
-
-# Append the backend image URL to the images array
-images+=("${repobase}/${reponame_backend}")
 
 #
 # Setup CI when pushing to Github. 

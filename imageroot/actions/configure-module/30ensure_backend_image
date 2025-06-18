@@ -1,44 +1,63 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
 #
 # Copyright (C) 2025 Nethesis S.r.l.
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-set -e
-exec 1>&2
+import os
+import sys
+import subprocess
+import agent
 
 # Use a local image tag (not a registry URL) for the backend image
-BACKEND_IMAGE="localhost/mail-webhooks-backend:latest"
+backend_image = "localhost/mail-webhooks-backend:latest"
 
-echo "Ensuring backend image is available: ${BACKEND_IMAGE}"
+print(f"Ensuring backend image is available: {backend_image}", file=sys.stderr)
 
-# Always build the backend image locally (don't try to pull it)
-echo "Building backend image from source..."
+# Change to the API directory for building
+api_dir = "/imageroot/api"
+if not os.path.exists(api_dir):
+    print(f"Error: API directory not found: {api_dir}", file=sys.stderr)
+    sys.exit(1)
 
-# Build the backend image using the Containerfile in the api directory
-cd /imageroot/api
+os.chdir(api_dir)
 
-echo "Building backend image with tag: ${BACKEND_IMAGE}"
-if podman build -t "${BACKEND_IMAGE}" .; then
-    echo "Successfully built backend image: ${BACKEND_IMAGE}"
-else
-    echo "Error: Failed to build backend image"
-    exit 1
-fi
+print("Building backend image from source...", file=sys.stderr)
+
+# Build the backend image using podman and the Containerfile
+try:
+    subprocess.run([
+        "podman", "build", 
+        "-t", backend_image,
+        "."
+    ], check=True, stderr=subprocess.STDOUT)
+    print(f"Successfully built backend image: {backend_image}", file=sys.stderr)
+except subprocess.CalledProcessError as e:
+    print(f"Error: Failed to build backend image: {e}", file=sys.stderr)
+    sys.exit(1)
 
 # Verify the image was created
-if podman image exists "${BACKEND_IMAGE}"; then
-    echo "Backend image verified: ${BACKEND_IMAGE}"
-    # Show image info for debugging
-    podman image inspect "${BACKEND_IMAGE}" --format "{{.Id}}" | head -c 12
-    echo " - Image created successfully"
-else
-    echo "Error: Backend image was not created properly"
-    exit 1
-fi
+try:
+    subprocess.run([
+        "podman", "image", "exists", backend_image
+    ], check=True)
+    print(f"Backend image verified: {backend_image}", file=sys.stderr)
+    
+    # Get image ID for logging
+    result = subprocess.run([
+        "podman", "image", "inspect", backend_image,
+        "--format", "{{.Id}}"
+    ], capture_output=True, text=True, check=True)
+    
+    image_id = result.stdout.strip()[:12]
+    print(f"{image_id} - Image created successfully", file=sys.stderr)
+    
+except subprocess.CalledProcessError:
+    print("Error: Backend image was not created properly", file=sys.stderr)
+    sys.exit(1)
 
-# Set the environment variable for the systemd service to use
-echo "Backend image configuration is handled in the main configure step"
+# Set the backend image environment variable
+agent.set_env("BACKEND_IMAGE", backend_image)
 
-echo "Backend image check completed successfully"
+print("Backend image setup completed successfully", file=sys.stderr)

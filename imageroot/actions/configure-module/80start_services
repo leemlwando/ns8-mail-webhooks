@@ -1,36 +1,60 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
 #
-# Copyright (C) 2023 Nethesis S.r.l.
+# Copyright (C) 2025 Nethesis S.r.l.
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-# If the control reaches this step, the service can be enabled and started
+import sys
+import subprocess
+import os
+import agent
 
-echo "Starting mail-webhooks service configuration..." >&2
+print("Starting mail-webhooks service configuration...", file=sys.stderr)
 
 # Create required files
-touch smarthost.env
+subprocess.run(["touch", "smarthost.env"], check=True)
 
-echo "Environment variables in current context:" >&2
-env | grep -E "(MONGODB|MAIL_|WEBHOOKS|EVENTS|SETTINGS|TRIGGERS|LOGS)" >&2
+# Print environment variables for debugging
+print("Environment variables in current context:", file=sys.stderr)
+for key, value in os.environ.items():
+    if any(prefix in key for prefix in ["MONGODB", "MAIL_", "WEBHOOKS", "EVENTS", "SETTINGS", "TRIGGERS", "LOGS"]):
+        print(f"{key}={value}", file=sys.stderr)
 
-# Backend image should have been built by 30ensure_backend_image
-echo "Backend image should be ready (built by 30ensure_backend_image)..." >&2
+print("Backend image should be ready (built by 30ensure_backend_image)...", file=sys.stderr)
 
-echo "Enabling and starting mail-webhooks.service..." >&2
-systemctl --user enable --now mail-webhooks.service
+# Enable and start the main service
+print("Enabling and starting mail-webhooks.service...", file=sys.stderr)
+try:
+    subprocess.run([
+        "systemctl", "--user", "enable", "--now", "mail-webhooks.service"
+    ], check=True)
+except subprocess.CalledProcessError as e:
+    print(f"Error starting mail-webhooks.service: {e}", file=sys.stderr)
+    sys.exit(1)
 
-echo "Checking service status..." >&2
-systemctl --user status mail-webhooks.service --no-pager >&2
+# Check service status
+print("Checking service status...", file=sys.stderr)
+try:
+    subprocess.run([
+        "systemctl", "--user", "status", "mail-webhooks.service", "--no-pager"
+    ], check=False, stderr=subprocess.STDOUT)
+except subprocess.CalledProcessError:
+    # Status command might return non-zero even for running services
+    pass
 
 # Mail monitor service disabled for Phase 1 (API-only implementation)
-if false; then  # [[ -n "${MONGODB_URL}" ]]; then
-    echo "Starting mail monitor service..." >&2
-    systemctl --user enable --now mail-monitor.service || true
-    echo "Mail monitor service started" >&2
-else
-    echo "Mail monitor service disabled - Phase 1 implementation (API only)" >&2
-fi
+mongodb_url = os.environ.get("MONGODB_URL", "")
+if False:  # mongodb_url:  # Disabled for Phase 1
+    print("Starting mail monitor service...", file=sys.stderr)
+    try:
+        subprocess.run([
+            "systemctl", "--user", "enable", "--now", "mail-monitor.service"
+        ], check=False)
+        print("Mail monitor service started", file=sys.stderr)
+    except subprocess.CalledProcessError:
+        print("Warning: Failed to start mail monitor service", file=sys.stderr)
+else:
+    print("Mail monitor service disabled - Phase 1 implementation (API only)", file=sys.stderr)
 
-echo "Service startup completed" >&2
+print("Service startup completed", file=sys.stderr)

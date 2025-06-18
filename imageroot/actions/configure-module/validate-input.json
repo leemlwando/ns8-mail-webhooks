@@ -1,10 +1,15 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "configure-module input",
-  "$id": "http://schema.nethserver.org/mail-webhooks/configure-module-input.json",
-  "description": "Configure Mail Webhooks module",
+  "$id": "http://schema.nethserver.org/mail-webhooks/configure-module-input.json",  "description": "Configure Mail Webhooks module",
   "type": "object",
-  "properties": {    "mongodb_url": {
+  "properties": {
+    "hostname": {
+      "type": "string",
+      "description": "FQDN hostname for the mail webhooks service",
+      "format": "idn-hostname"
+    },
+    "mongodb_url": {
       "type": "string",
       "description": "MongoDB connection URL (required)",
       "pattern": "^mongodb(\\+srv)?://.+",

@@ -7,69 +7,58 @@
 
 import json
 import sys
+import os
 import agent
 import agent.tasks
-import os
 
-try:
-    request = json.load(sys.stdin)
-except json.JSONDecodeError as e:
-    print(f"Error: Invalid JSON input: {e}", file=sys.stderr)
-    sys.exit(1)
+# Parse the configuration request
+data = json.load(sys.stdin)
 
-print(f"Received configuration request: {request}", file=sys.stderr)
+# Setup default values
+hostname = data.get("hostname", "")
+http2https = data.get("http2https", True)
+lets_encrypt = data.get("lets_encrypt", False)
+mongodb_url = data["mongodb_url"]
 
-# Validate required configuration
-if "mongodb_url" not in request:
-    print("Error: mongodb_url is required for configuration", file=sys.stderr)
-    sys.exit(1)
+# Collection names with defaults
+webhooks_collection = data.get("webhooks_collection", "webhooks")
+events_collection = data.get("events_collection", "events")
+settings_collection = data.get("settings_collection", "settings")
+triggers_collection = data.get("triggers_collection", "triggers")
+logs_collection = data.get("logs_collection", "logs")
 
-print(f"Setting environment variables...", file=sys.stderr)
+# Mail server integration (optional)
+mail_server_uuid = data.get("mail_server_uuid", "")
 
-# Set MongoDB URL from request
-agent.set_env("MONGODB_URL", request["mongodb_url"])
+# Set environment variables
+agent.set_env("MONGODB_URL", mongodb_url)
+agent.set_env("WEBHOOKS_COLLECTION", webhooks_collection)
+agent.set_env("EVENTS_COLLECTION", events_collection)
+agent.set_env("SETTINGS_COLLECTION", settings_collection)
+agent.set_env("TRIGGERS_COLLECTION", triggers_collection)
+agent.set_env("LOGS_COLLECTION", logs_collection)
+agent.set_env("MAIL_SERVER_UUID", mail_server_uuid)
 
-# Set mail server UUID if provided
-if "mail_server_uuid" in request:
-    agent.set_env("MAIL_SERVER_UUID", request["mail_server_uuid"])
+# Configure Traefik routing if hostname is provided
+if hostname:
+    agent.set_env("TRAEFIK_HOST", hostname)
+    agent.set_env("TRAEFIK_HTTP2HTTPS", str(http2https))
+    agent.set_env("TRAEFIK_LETS_ENCRYPT", str(lets_encrypt))
+    
+    # Configure Traefik virtual host
+    response = agent.tasks.run(
+        agent_id=agent.resolve_agent_id('traefik@node'),
+        action='set-route',
+        data={
+            'instance': os.environ['MODULE_ID'],
+            'url': f'http://127.0.0.1:{os.environ["TCP_PORT"]}',
+            'host': hostname,
+            'http2https': http2https,
+            'lets_encrypt': lets_encrypt
+        }
+    )    
+    # Check if traefik configuration was successful
+    agent.assert_exp(response['exit_code'] == 0)
 
-# Set collection names with defaults
-agent.set_env("WEBHOOKS_COLLECTION", request.get("webhooks_collection", "webhooks"))
-agent.set_env("EVENTS_COLLECTION", request.get("events_collection", "events"))
-agent.set_env("SETTINGS_COLLECTION", request.get("settings_collection", "settings"))
-agent.set_env("TRIGGERS_COLLECTION", request.get("triggers_collection", "triggers"))
-agent.set_env("LOGS_COLLECTION", request.get("logs_collection", "logs"))
-
-# Set backend URL for webhook actions
-agent.set_env("BACKEND_URL", f"http://127.0.0.1:{os.environ['TCP_PORT']}")
-
-# Set backend image for systemd service
-agent.set_env("MAIL_WEBHOOKS_BACKEND_IMAGE", "localhost/mail-webhooks-backend:latest")
-
-print(f"Environment variables set successfully", file=sys.stderr)
-
-# Configure Traefik to route "/mail-webhooks" path requests to the service
-print(f"Configuring Traefik route...", file=sys.stderr)
-response = agent.tasks.run(
-    agent_id=agent.resolve_agent_id('traefik@node'),
-    action='set-route',
-    data={
-        'instance': os.environ['MODULE_ID'],
-        'url': 'http://127.0.0.1:' + os.environ["TCP_PORT"],
-        'http2https': request.get('http2https', False),
-        'lets_encrypt': request.get('lets_encrypt', False),
-        'path': '/mail-webhooks',
-    },
-)
-
-# Check if traefik configuration has been successful
-agent.assert_exp(response['exit_code'] == 0)
-print(f"Traefik route configured successfully", file=sys.stderr)
-
-# Ensure all environment variables are persisted
-agent.dump_env()
-
-print(f"Mail Webhooks module configured successfully")
-print(f"MongoDB URL: {request['mongodb_url']}")
-print(f"Collection names: webhooks={request.get('webhooks_collection', 'webhooks')}, events={request.get('events_collection', 'events')}, settings={request.get('settings_collection', 'settings')}, triggers={request.get('triggers_collection', 'triggers')}, logs={request.get('logs_collection', 'logs')}")
-print(f"Access URL: https://<server>/mail-webhooks")
+# Environment variables are automatically persisted when using agent.set_env()
+print("Configuration completed successfully", file=sys.stderr)
