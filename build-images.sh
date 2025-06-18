@@ -31,13 +31,14 @@ buildah run \
     nodebuilder-mailwebhooks \
     sh -c "yarn install && yarn build"
 
+# Ensure all action scripts are executable before adding to container
+echo "Setting executable permissions on action scripts..."
+find imageroot/actions -type f -name "[0-9]*" -exec chmod +x {} \; 2>/dev/null || true
+find imageroot/bin -type f -exec chmod +x {} \; 2>/dev/null || true
+
 # Add imageroot directory to the container image
 buildah add "${container}" imageroot /imageroot
 buildah add "${container}" ui/dist /ui
-
-# Ensure all action scripts are executable
-buildah run "${container}" -- find /imageroot/actions -type f -name "[0-9]*" -exec chmod +x {} \;
-buildah run "${container}" -- find /imageroot/bin -type f -exec chmod +x {} \; 2>/dev/null || true
 
 # Setup the entrypoint, ask to reserve one TCP port with the label and set a rootless container
 buildah config --entrypoint=/ \
