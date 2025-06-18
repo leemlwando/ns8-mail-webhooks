@@ -21,13 +21,13 @@ systemctl --user enable --now mail-webhooks.service
 echo "Checking service status..." >&2
 systemctl --user status mail-webhooks.service --no-pager >&2
 
-# Auto-start mail monitor if MongoDB is configured
-if [[ -n "${MONGODB_URL}" ]]; then
+# Auto-start mail monitor if MongoDB is configured (Phase 2 - disabled for now)
+if false; then  # [[ -n "${MONGODB_URL}" ]]; then
     echo "Starting mail monitor service..." >&2
     systemctl --user enable --now mail-monitor.service || true
     echo "Mail monitor service started" >&2
 else
-    echo "MongoDB URL not configured - mail monitor will not start automatically" >&2
+    echo "Mail monitor service disabled - Phase 1 implementation (API only)" >&2
 fi
 
 echo "Service startup completed" >&2
