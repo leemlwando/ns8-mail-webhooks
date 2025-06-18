@@ -1,0 +1,27 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+# Start mail monitor service
+
+set -e
+
+# Read current settings
+source <(jq -r 'to_entries[] | "export " + (.key|ascii_upcase) + "=" + (.value|tostring|@sh)' < <(cat))
+
+# Check if mail monitoring is enabled and configured
+if [[ -z "${MONGODB_URL}" ]]; then
+    echo "MongoDB URL not configured" >&2
+    exit 1
+fi
+
+# Start the mail monitor service
+systemctl --user start mail-monitor.service
+
+# Enable auto-start
+systemctl --user enable mail-monitor.service
+
+echo "Mail monitor service started successfully"

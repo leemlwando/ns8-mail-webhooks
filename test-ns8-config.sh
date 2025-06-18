@@ -17,14 +17,22 @@ else
     exit 1
 fi
 
-if [ -d "backend" ]; then
-    echo "✓ backend directory exists"
+if [ -d "imageroot/api" ]; then
+    echo "✓ imageroot/api directory exists"
 else
-    echo "✗ backend directory missing"
+    echo "✗ imageroot/api directory missing"
     exit 1
 fi
 
-if [ -f "backend/Containerfile" ]; then
+# Verify backend folder was properly removed
+if [ -d "backend" ]; then
+    echo "✗ backend directory should be removed (code moved to imageroot/api)"
+    exit 1
+else
+    echo "✓ backend directory properly removed"
+fi
+
+if [ -f "imageroot/api/Containerfile" ]; then
     echo "✓ backend Containerfile exists"
 else
     echo "✗ backend Containerfile missing"
@@ -56,7 +64,7 @@ if [ -f "build-images.sh" ]; then
     echo "✓ build-images.sh exists"
     
     # Check if build script includes backend image
-    if grep -q "backend" "build-images.sh"; then
+    if grep -q "imageroot/api" "build-images.sh"; then
         echo "✓ Build script includes backend"
     else
         echo "✗ Build script missing backend configuration"
@@ -76,14 +84,14 @@ fi
 echo
 
 echo "4. Checking backend API structure..."
-if [ -f "backend/app.py" ]; then
-    echo "✓ Backend app.py exists"
+if [ -f "imageroot/api/main.py" ]; then
+    echo "✓ Backend main.py exists"
 else
-    echo "✗ Backend app.py missing"
+    echo "✗ Backend main.py missing"
     exit 1
 fi
 
-if [ -f "backend/requirements.txt" ]; then
+if [ -f "imageroot/api/requirements.txt" ]; then
     echo "✓ Backend requirements.txt exists"
 else
     echo "✗ Backend requirements.txt missing"

@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+
+#
+# Mail server discovery for mail-webhooks module
+# Discovers available mail servers in the cluster and retrieves their configuration
+#
+
+import sys
+import json
+import agent
+import os
+
+def discover_mail_servers():
+    """Discover mail servers in the cluster and return their configuration"""
+    
+    rdb = agent.redis_connect(use_replica=True)
+    mail_servers = []
+    
+    try:
+        # Find all mail module instances
+        mail_keys = rdb.keys('module/mail*/srv/tcp/imap')
+        
+        for key in mail_keys:
+            key_str = key.decode('utf-8') if isinstance(key, bytes) else key
+            # Extract module ID from key: module/mail1/srv/tcp/imap -> mail1
+            module_id = key_str.split('/')[1]
+            
+            # Get IMAP service info
+            imap_info = rdb.hgetall(key)
+            
+            # Also get submission service info if available
+            submission_key = f'module/{module_id}/srv/tcp/submission'
+            submission_info = rdb.hgetall(submission_key)
+            
+            # Convert bytes to strings
+            imap_data = {k.decode('utf-8'): v.decode('utf-8') for k, v in imap_info.items()}
+            submission_data = {k.decode('utf-8'): v.decode('utf-8') for k, v in submission_info.items()}
+            
+            mail_server = {
+                'module_id': module_id,
+                'uuid': imap_data.get('uuid', ''),
+                'host': imap_data.get('host', ''),
+                'user_domain': imap_data.get('user_domain', ''),
+                'imap': {
+                    'host': imap_data.get('host', ''),
+                    'port': int(imap_data.get('port', 143)),
+                    'node': imap_data.get('node', '')
+                },
+                'submission': {
+                    'host': submission_data.get('host', ''),
+                    'port': int(submission_data.get('port', 587)),
+                    'node': submission_data.get('node', '')
+                } if submission_data else None
+            }
+            
+            mail_servers.append(mail_server)
+            
+    except Exception as e:
+        print(f"Error discovering mail servers: {e}", file=sys.stderr)
+        return []
+    
+    return mail_servers
+
+def get_mail_credentials(module_id):
+    """Get mail credentials for a specific mail module"""
+    try:
+        rdb = agent.redis_connect()
+        
+        # Get the current node ID
+        current_node = os.environ.get('NODE_ID', '1')
+        
+        # Read mail module environment to find which node it's on
+        mail_env = rdb.hgetall(f'module/{module_id}/environment')
+        mail_node = mail_env.get(b'NODE_ID', b'1').decode('utf-8')
+        
+        if mail_node != current_node:
+            # Mail server is on a different node - we'll need to handle this case
+            # For now, return empty credentials
+            return {}
+        
+        # Try to get credentials from the mail module's environment
+        # Note: This would need proper authorization/role checking in production
+        dovecot_env_key = f'module/{module_id}/environment'
+        env_data = rdb.hgetall(dovecot_env_key)
+        
+        credentials = {}
+        for key, value in env_data.items():
+            key_str = key.decode('utf-8') if isinstance(key, bytes) else key
+            value_str = value.decode('utf-8') if isinstance(value, bytes) else value
+            
+            if 'DOVECOT_' in key_str:
+                credentials[key_str] = value_str
+        
+        return credentials
+        
+    except Exception as e:
+        print(f"Error getting mail credentials for {module_id}: {e}", file=sys.stderr)
+        return {}
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "--credentials":
+        if len(sys.argv) > 2:
+            module_id = sys.argv[2]
+            credentials = get_mail_credentials(module_id)
+            print(json.dumps(credentials, indent=2))
+        else:
+            print("Usage: discover-mail-servers --credentials <module_id>", file=sys.stderr)
+            sys.exit(1)
+    else:
+        servers = discover_mail_servers()
+        print(json.dumps(servers, indent=2))

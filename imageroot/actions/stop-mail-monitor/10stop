@@ -1,0 +1,18 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+# Stop mail monitor service
+
+set -e
+
+# Stop the mail monitor service
+systemctl --user stop mail-monitor.service || true
+
+# Disable auto-start
+systemctl --user disable mail-monitor.service || true
+
+echo "Mail monitor service stopped successfully"

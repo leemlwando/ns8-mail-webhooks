@@ -34,14 +34,108 @@
               type="password"
             ></cv-text-input>
 
-            <!-- Mail Server UUID -->
+            <!-- Mail Server Configuration -->
+            <cv-accordion style="margin-top: 2rem;">
+              <cv-accordion-item>
+                <template slot="title">{{
+                  $t("settings.mail_server_config")
+                }}</template>
+                <template slot="content">
+                  <cv-row>
+                    <cv-column>
+                      <cv-button
+                        kind="secondary"
+                        @click="discoverMailServers"
+                        :disabled="loading.discoverServers"
+                        style="margin-bottom: 1rem;"
+                      >
+                        <template v-if="loading.discoverServers">
+                          {{ $t("settings.discovering_servers") }}
+                        </template>
+                        <template v-else>
+                          {{ $t("settings.discover_mail_servers") }}
+                        </template>
+                      </cv-button>
+                    </cv-column>
+                  </cv-row>
+                  
+                  <cv-row v-if="discoveredServers.length > 0">
+                    <cv-column>
+                      <cv-dropdown
+                        :label="$t('settings.select_mail_server')"
+                        v-model="selectedServerUuid"
+                        :disabled="loading.getConfiguration || loading.configureModule"
+                      >
+                        <cv-dropdown-item
+                          v-for="server in discoveredServers"
+                          :key="server.uuid"
+                          :value="server.uuid"
+                        >
+                          {{ server.module_id }} ({{ server.host }})
+                        </cv-dropdown-item>
+                      </cv-dropdown>
+                    </cv-column>
+                  </cv-row>
+
+                  <cv-row v-if="selectedServerUuid">
+                    <cv-column :md="4">
+                      <cv-text-input
+                        :label="$t('settings.mail_username')"
+                        v-model="mailCredentials.username"
+                        :placeholder="$t('settings.mail_username_placeholder')"
+                        :disabled="loading.getConfiguration || loading.configureModule"
+                      ></cv-text-input>
+                    </cv-column>
+                    <cv-column :md="4">
+                      <cv-text-input
+                        :label="$t('settings.mail_password')"
+                        v-model="mailCredentials.password"
+                        type="password"
+                        :placeholder="$t('settings.mail_password_placeholder')"
+                        :disabled="loading.getConfiguration || loading.configureModule"
+                      ></cv-text-input>
+                    </cv-column>
+                    <cv-column :md="4">
+                      <cv-button
+                        kind="tertiary"
+                        @click="testMailConnection"
+                        :disabled="!canTestConnection || loading.testConnection"
+                        style="margin-top: 1.5rem;"
+                      >
+                        <template v-if="loading.testConnection">
+                          {{ $t("settings.testing_connection") }}
+                        </template>
+                        <template v-else>
+                          {{ $t("settings.test_connection") }}
+                        </template>
+                      </cv-button>
+                    </cv-column>
+                  </cv-row>
+
+                  <cv-row v-if="connectionTestResult">
+                    <cv-column>
+                      <NsInlineNotification
+                        :kind="connectionTestResult.success ? 'success' : 'error'"
+                        :title="$t('settings.connection_test')"
+                        :description="connectionTestResult.message"
+                        :showCloseButton="true"
+                        @close="connectionTestResult = null"
+                      />
+                    </cv-column>
+                  </cv-row>
+                </template>
+              </cv-accordion-item>
+            </cv-accordion>
+
+            <!-- Mail Server UUID (Legacy - kept for manual entry) -->
             <cv-text-input
-              :label="$t('settings.mail_server_uuid')"
+              :label="$t('settings.mail_server_uuid_manual')"
               v-model="mail_server_uuid"
               :placeholder="$t('settings.mail_server_uuid_placeholder')"
               :disabled="loading.getConfiguration || loading.configureModule"
               :invalid-message="error.mail_server_uuid"
               ref="mail_server_uuid"
+              style="margin-top: 1rem;"
             ></cv-text-input>
 
             <!-- Collection Names Section -->
@@ -187,9 +281,19 @@ export default {
       settings_collection: "settings",
       triggers_collection: "triggers",
       logs_collection: "logs",
+      // Mail server discovery
+      discoveredServers: [],
+      selectedServerUuid: "",
+      mailCredentials: {
+        username: "",
+        password: "",
+      },
+      connectionTestResult: null,
       loading: {
         getConfiguration: false,
         configureModule: false,
+        discoverServers: false,
+        testConnection: false,
       },
       error: {
         getConfiguration: "",
@@ -206,6 +310,13 @@ export default {
   },
   computed: {
     ...mapState(["instanceName", "core", "appName"]),
+    canTestConnection() {
+      return (
+        this.selectedServerUuid &&
+        this.mailCredentials.username &&
+        this.mailCredentials.password
+      );
+    },
   },
   beforeRouteEnter(to, from, next) {
     next((vm) => {
@@ -412,6 +523,81 @@ export default {
 
       // reload configuration
       this.getConfiguration();
+    },
+    async discoverMailServers() {
+      this.loading.discoverServers = true;
+      try {
+        const response = await fetch(`/api/mail-servers`);
+        if (response.ok) {
+          const servers = await response.json();
+          this.discoveredServers = servers;
+          
+          // Auto-select the first server if available
+          if (servers.length > 0) {
+            this.selectedServerUuid = servers[0].uuid;
+          }
+        } else {
+          console.error("Failed to discover mail servers");
+        }
+      } catch (error) {
+        console.error("Error discovering mail servers:", error);
+      } finally {
+        this.loading.discoverServers = false;
+      }
+    },
+    async testMailConnection() {
+      if (!this.canTestConnection) return;
+      
+      this.loading.testConnection = true;
+      this.connectionTestResult = null;
+      
+      try {
+        const response = await fetch(
+          `/api/mail-servers/${this.selectedServerUuid}/test-connection`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              username: this.mailCredentials.username,
+              password: this.mailCredentials.password,
+            }),
+          }
+        );
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          this.connectionTestResult = {
+            success: true,
+            message: this.$t('settings.connection_test_success', {
+              responseTime: (result.response_time * 1000).toFixed(0)
+            })
+          };
+          
+          // Auto-fill mail_server_uuid if connection is successful
+          this.mail_server_uuid = this.selectedServerUuid;
+          
+        } else {
+          this.connectionTestResult = {
+            success: false,
+            message: this.$t('settings.connection_test_failed', {
+              error: result.error || 'Unknown error'
+            })
+          };
+        }
+      } catch (error) {
+        console.error("Error testing mail connection:", error);
+        this.connectionTestResult = {
+          success: false,
+          message: this.$t('settings.connection_test_error', {
+            error: error.message
+          })
+        };
+      } finally {
+        this.loading.testConnection = false;
+      }
     },
   },
 };

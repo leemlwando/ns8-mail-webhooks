@@ -2,13 +2,39 @@
 
 Mail Webhooks module for [NethServer 8](https://github.com/NethServer/ns8-core) that provides webhook triggers for incoming mail events.
 
+# ns8-mail-webhooks
+
+Mail Webhooks module for [NethServer 8](https://github.com/NethServer/ns8-core) that provides comprehensive webhook triggers for incoming mail events with advanced IMAP integration.
+
 ## Features
 
-- **Webhook Management**: Create, update, delete and test webhooks
-- **Multiple Trigger Types**: Real-time and interval-based triggers
-- **Payload Formats**: Support for RAW and JSON payload types
-- **Mail Integration**: Integrates with ns8-mail module for mailbox access
+### Core Functionality
+- **Webhook Management**: Create, update, delete and test webhooks with full CRUD API
+- **Multiple Trigger Types**: Real-time and interval-based triggers with configurable intervals
+- **Payload Formats**: Support for RAW and JSON payload types with message parsing
 - **External MongoDB**: Uses external MongoDB instance (no self-hosted database)
+
+### Advanced Mail Integration
+- **IMAP Integration**: Full IMAP client with SSL/TLS support for direct mailbox access
+- **Mail Server Discovery**: Automatic detection of NS8 mail server instances via Redis
+- **Multi-Server Support**: Monitor multiple mail servers simultaneously
+- **Connection Testing**: Built-in mail server connection validation
+
+### Message Processing
+- **Advanced Filtering**: Sender, subject, and body pattern matching with regex support
+- **Attachment Filtering**: Filter by attachment presence and message size
+- **Mailbox Targeting**: Monitor specific mailboxes or all mailboxes
+- **Message Parsing**: Complete email parsing with headers, body, and attachments
+
+### Post-Processing Actions
+- **Message Actions**: Mark as read, delete, or move messages after webhook delivery
+- **Custom Flags**: Add custom flags to processed messages
+- **Action Logging**: Track all post-processing actions with detailed logs
+
+### Background Services
+- **Mail Monitor Service**: Dedicated background service for continuous monitoring
+- **Auto-Recovery**: Automatic service recovery with configurable retry logic
+- **Performance Monitoring**: Response time tracking and execution logging
 
 ## Install
 
