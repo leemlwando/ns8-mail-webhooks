@@ -43,7 +43,6 @@ buildah config --entrypoint=/ \
     --label="org.nethserver.authorizations=traefik@node:routeadm cluster:accountconsumer" \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
-    --label="org.nethserver.images=docker.io/mongo:7.0 ghcr.io/nethserver/mail-webhooks-backend:latest" \
     "${container}"
 
 # Commit the image
@@ -51,6 +50,32 @@ buildah commit "${container}" "${repobase}/${reponame}"
 
 # Append the image URL to the images array
 images+=("${repobase}/${reponame}")
+
+# Now build the API service image separately
+echo "Building mail-webhooks API service image..."
+api_container=$(buildah from python:3.11-slim)
+
+# Set working directory
+buildah config --workingdir /app "${api_container}"
+
+# Copy and install requirements
+buildah copy "${api_container}" imageroot/api/requirements.txt /app/
+buildah run "${api_container}" pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+buildah copy "${api_container}" imageroot/api /app/
+
+# Make scripts executable
+buildah run "${api_container}" chmod +x entrypoint.sh start.sh
+
+# Expose port and set entrypoint
+buildah config --port 8080 --entrypoint '["./entrypoint.sh"]' "${api_container}"
+
+# Commit the API image
+buildah commit "${api_container}" "${repobase}/${reponame}-api"
+
+# Append the API image URL to the images array
+images+=("${repobase}/${reponame}-api")
 
 #
 # NOTICE:

@@ -10,13 +10,12 @@ import sys
 import agent
 
 try:
-    backend_image = os.environ.get('BACKEND_IMAGE', 'ghcr.io/nethserver/mail-webhooks-backend:latest')
-    if backend_image:
-        try:
-            agent.run_helper("podman", "pull", backend_image).check_returncode()
-        except Exception as e:
-            print(f"Warning: Could not pull backend image: {e}", file=sys.stderr)
+    # Set the main module image to use (this will be the built API image)
+    mail_webhooks_image = os.environ.get('MAIL_WEBHOOKS_IMAGE', 'ghcr.io/nethserver/mail-webhooks-api:latest')
+    agent.set_env('MAIL_WEBHOOKS_IMAGE', mail_webhooks_image)
+    
+    print(f"Mail webhooks will use image: {mail_webhooks_image}", file=sys.stderr)
     sys.exit(0)
 except Exception as e:
-    print(f"Error ensuring backend image: {e}", file=sys.stderr)
-    sys.exit(0)
+    print(f"Error setting mail webhooks image: {e}", file=sys.stderr)
+    sys.exit(1)
