@@ -11,8 +11,9 @@ import os
 import agent
 import agent.tasks
 
-# Parse the configuration request
-data = json.load(sys.stdin)
+try:
+    # Parse the configuration request
+    data = json.load(sys.stdin)
 
 # Setup default values
 hostname = data.get("hostname", "")
@@ -62,3 +63,7 @@ if hostname:
 
 # Environment variables are automatically persisted when using agent.set_env()
 print("Configuration completed successfully", file=sys.stderr)
+
+except Exception as e:
+    print(f"Error during configuration: {e}", file=sys.stderr)
+    sys.exit(1)

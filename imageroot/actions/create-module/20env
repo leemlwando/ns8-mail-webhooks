@@ -5,26 +5,34 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
+import sys
 import agent
 
-# Set default environment variables for the mail webhooks module
-agent.set_env('MONGODB_URL', '')
-agent.set_env('WEBHOOKS_COLLECTION', 'webhooks')
-agent.set_env('EVENTS_COLLECTION', 'events')
-agent.set_env('SETTINGS_COLLECTION', 'settings')
-agent.set_env('TRIGGERS_COLLECTION', 'triggers')
-agent.set_env('LOGS_COLLECTION', 'logs')
+try:
+    # Set default environment variables for the mail webhooks module
+    agent.set_env('MONGODB_URL', '')
+    agent.set_env('WEBHOOKS_COLLECTION', 'webhooks')
+    agent.set_env('EVENTS_COLLECTION', 'events')
+    agent.set_env('SETTINGS_COLLECTION', 'settings')
+    agent.set_env('TRIGGERS_COLLECTION', 'triggers')
+    agent.set_env('LOGS_COLLECTION', 'logs')
 
-# HTTP/HTTPS settings
-agent.set_env('TRAEFIK_HOST', '')
-agent.set_env('TRAEFIK_HTTP2HTTPS', 'True')
-agent.set_env('TRAEFIK_LETS_ENCRYPT', 'False')
+    # HTTP/HTTPS settings
+    agent.set_env('TRAEFIK_HOST', '')
+    agent.set_env('TRAEFIK_HTTP2HTTPS', 'True')
+    agent.set_env('TRAEFIK_LETS_ENCRYPT', 'False')
 
-# Mail server integration
-agent.set_env('MAIL_SERVER_UUID', '')
+    # Mail server integration
+    agent.set_env('MAIL_SERVER_UUID', '')
 
-# Backend image for the API service
-agent.set_env('BACKEND_IMAGE', 'localhost/mail-webhooks-backend:latest')
+    # Backend image for the API service
+    agent.set_env('BACKEND_IMAGE', 'localhost/mail-webhooks-backend:latest')
 
-# Phase 1: API-only mode (no mail monitor)
-agent.set_env('MAIL_MONITOR_ENABLED', 'False')
+    # Phase 1: API-only mode (no mail monitor)
+    agent.set_env('MAIL_MONITOR_ENABLED', 'False')
+
+    print("Environment variables set successfully", file=sys.stderr)
+
+except Exception as e:
+    print(f"Error setting environment variables: {e}", file=sys.stderr)
+    sys.exit(1)

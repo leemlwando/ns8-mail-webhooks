@@ -5,21 +5,29 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
+import sys
 import agent
 
-# Allow other modules to read module configuration and status
-agent.run_helper("redis-exec", "SADD", f"{agent.get_agent_id()}/roles/reader", "get-*", "list-*").check_returncode()
+try:
+    # Allow other modules to read module configuration and status
+    agent.run_helper("redis-exec", "SADD", f"{agent.get_agent_id()}/roles/reader", "get-*", "list-*").check_returncode()
 
-# Allow the instance itself to run some subtasks during operations
-agent.run_helper("redis-exec", "SADD", f"{agent.get_agent_id()}/roles/selfadm",
-    "configure-module",
-    "get-configuration",
-    "create-webhook",
-    "update-webhook", 
-    "delete-webhook",
-    "list-webhooks",
-    "test-webhook",
-    "start-mail-monitor",
-    "stop-mail-monitor",
-    "get-mail-monitor-status"
-).check_returncode()
+    # Allow the instance itself to run some subtasks during operations
+    agent.run_helper("redis-exec", "SADD", f"{agent.get_agent_id()}/roles/selfadm",
+        "configure-module",
+        "get-configuration",
+        "create-webhook",
+        "update-webhook", 
+        "delete-webhook",
+        "list-webhooks",
+        "test-webhook",
+        "start-mail-monitor",
+        "stop-mail-monitor",
+        "get-mail-monitor-status"
+    ).check_returncode()
+
+    print("Grants setup completed successfully", file=sys.stderr)
+
+except Exception as e:
+    print(f"Error setting up grants: {e}", file=sys.stderr)
+    sys.exit(1)

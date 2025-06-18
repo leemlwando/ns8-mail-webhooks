@@ -47,7 +47,10 @@ if "hostname" in data and data["hostname"]:
         json.dump([{
             'field': 'hostname',
             'parameter': 'hostname',
-            'value': hostname,
-            'error': 'domain_already_used_in_traefik'
+            'value': hostname,            'error': 'domain_already_used_in_traefik'
         }], fp=sys.stdout)
         sys.exit(2)
+
+# Validation successful
+print("Validation completed successfully", file=sys.stderr)
+sys.exit(0)
