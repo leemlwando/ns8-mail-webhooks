@@ -25,10 +25,10 @@ ExecStart=/usr/bin/podman run \
     --replace --name=%N \
     --publish=127.0.0.1:${TCP_PORT}:8080 \
     --env=MONGODB_URL=${MONGODB_URL} \
-    --env=MAIL_SERVER_UUID=${MAIL_SERVER_UUID} \
-    --env=WEBHOOKS_COLLECTION=${WEBHOOKS_COLLECTION:-webhooks} \
+    --env=MAIL_SERVER_UUID=${MAIL_SERVER_UUID} \    --env=WEBHOOKS_COLLECTION=${WEBHOOKS_COLLECTION:-webhooks} \
     --env=EVENTS_COLLECTION=${EVENTS_COLLECTION:-events} \
-    --env=SETTINGS_COLLECTION=${SETTINGS_COLLECTION:-settings} \    --env=TRIGGERS_COLLECTION=${TRIGGERS_COLLECTION:-triggers} \
+    --env=SETTINGS_COLLECTION=${SETTINGS_COLLECTION:-settings} \
+    --env=TRIGGERS_COLLECTION=${TRIGGERS_COLLECTION:-triggers} \
     --env=LOGS_COLLECTION=${LOGS_COLLECTION:-logs} \
     ${MAIL_WEBHOOKS_BACKEND_IMAGE}
 ExecStop=/usr/bin/podman stop --ignore --cidfile %t/mail-webhooks.ctr-id -t 10
