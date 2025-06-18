@@ -35,6 +35,8 @@ buildah run \
 echo "Setting executable permissions on action scripts..."
 find imageroot/actions -type f -name "[0-9]*" -exec chmod +x {} \; 2>/dev/null || true
 find imageroot/bin -type f -exec chmod +x {} \; 2>/dev/null || true
+# Also ensure shell scripts are executable
+find imageroot -name "*.sh" -type f -exec chmod +x {} \; 2>/dev/null || true
 
 # Add imageroot directory to the container image
 buildah add "${container}" imageroot /imageroot
