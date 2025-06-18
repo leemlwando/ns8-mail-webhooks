@@ -6,7 +6,16 @@
 #
 
 import sys
-import agent
+import os
+
+# Ensure we can import agent module
+try:
+    import agent
+except ImportError as e:
+    print(f"Error importing agent module: {e}", file=sys.stderr)
+    print(f"Python path: {sys.path}", file=sys.stderr)
+    print(f"Current working directory: {os.getcwd()}", file=sys.stderr)
+    sys.exit(1)
 
 try:
     # Set default environment variables for the mail webhooks module
@@ -26,15 +35,14 @@ try:
     agent.set_env('MAIL_SERVER_UUID', '')
 
     # Backend image for the API service
-    agent.set_env('BACKEND_IMAGE', 'ghcr.io/nethserver/mail-webhooks-backend:latest')
-
-    # Phase 1: API-only mode (no mail monitor)
+    agent.set_env('BACKEND_IMAGE', 'ghcr.io/nethserver/mail-webhooks-backend:latest')    # Phase 1: API-only mode (no mail monitor)
     agent.set_env('MAIL_MONITOR_ENABLED', 'False')
 
     # Make sure everything is saved inside the environment file
     agent.dump_env()
-
+    
     print("Environment variables set successfully", file=sys.stderr)
+    sys.exit(0)  # Explicit success exit
 
 except Exception as e:
     print(f"Error setting environment variables: {e}", file=sys.stderr)
