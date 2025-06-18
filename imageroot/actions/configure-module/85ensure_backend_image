@@ -12,27 +12,27 @@ exec 1>&2
 if [[ -n "${MAIL_WEBHOOKS_BACKEND_IMAGE}" ]]; then
     echo "Backend image environment variable set: ${MAIL_WEBHOOKS_BACKEND_IMAGE}"
     
-    # First try to use local image, then try to pull from registry
+    # Check if image exists locally
     if podman image exists "${MAIL_WEBHOOKS_BACKEND_IMAGE}"; then
         echo "Backend image already exists locally"
     else
-        echo "Attempting to pull backend image from registry..."
-        if podman pull "${MAIL_WEBHOOKS_BACKEND_IMAGE}"; then
-            echo "Successfully pulled backend image from registry"
+        echo "Backend image not found locally, attempting to build..."
+        
+        # Build the backend image using the Containerfile in the api directory
+        cd /imageroot/api
+        if podman build -t "${MAIL_WEBHOOKS_BACKEND_IMAGE}" .; then
+            echo "Successfully built backend image: ${MAIL_WEBHOOKS_BACKEND_IMAGE}"
         else
-            echo "Warning: Could not pull backend image from registry"
-            echo "Checking for locally built images..."
-            
-            # Try to find a locally built image with similar name
-            LOCAL_IMAGE=$(podman images --format "{{.Repository}}:{{.Tag}}" | grep -E "(mail-webhooks-backend|ns8-mail-webhooks)" | head -1 || echo "")
-            if [[ -n "${LOCAL_IMAGE}" ]]; then
-                echo "Found local image: ${LOCAL_IMAGE}"
-                echo "Tagging local image as ${MAIL_WEBHOOKS_BACKEND_IMAGE}"
-                podman tag "${LOCAL_IMAGE}" "${MAIL_WEBHOOKS_BACKEND_IMAGE}"
-            else
-                echo "Error: No suitable backend image found locally or in registry"
-                exit 1
-            fi
+            echo "Error: Failed to build backend image"
+            exit 1
+        fi
+        
+        # Verify the image was created
+        if podman image exists "${MAIL_WEBHOOKS_BACKEND_IMAGE}"; then
+            echo "Backend image verified: ${MAIL_WEBHOOKS_BACKEND_IMAGE}"
+        else
+            echo "Error: Backend image was not created properly"
+            exit 1
         fi
     fi
 else
