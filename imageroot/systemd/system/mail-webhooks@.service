@@ -4,26 +4,26 @@
 #
 
 #
-# Mail Webhooks API service
+# Mail Webhooks API service (rootfull)
 #
 [Unit]
-Description=Mail Webhooks API server
+Description=Mail Webhooks API server for %i
 After=network.target
 
 [Service]
 Environment=PODMAN_SYSTEMD_UNIT=%n
-EnvironmentFile=%S/state/environment
-EnvironmentFile=-%S/state/secrets/environment
-WorkingDirectory=%S/state
+EnvironmentFile=/var/lib/nethserver/%i/state/environment
+EnvironmentFile=-/var/lib/nethserver/%i/state/secrets/environment
+WorkingDirectory=/var/lib/nethserver/%i/state
 Restart=always
 TimeoutStartSec=120
-ExecStartPre=/bin/rm -f %t/mail-webhooks.pid %t/mail-webhooks.ctr-id
+ExecStartPre=/bin/rm -f /run/%i-mail-webhooks.pid /run/%i-mail-webhooks.ctr-id
 ExecStart=/usr/bin/podman run \
     --detach \
-    --conmon-pidfile=%t/mail-webhooks.pid \
-    --cidfile=%t/mail-webhooks.ctr-id \
+    --conmon-pidfile=/run/%i-mail-webhooks.pid \
+    --cidfile=/run/%i-mail-webhooks.ctr-id \
     --cgroups=no-conmon \
-    --replace --name=%N \
+    --replace --name=%i-mail-webhooks \
     --publish=127.0.0.1:${TCP_PORT}:8080 \
     --env=MONGODB_URL=${MONGODB_URL} \
     --env=MAIL_SERVER_UUID=${MAIL_SERVER_UUID} \
@@ -33,10 +33,10 @@ ExecStart=/usr/bin/podman run \
     --env=TRIGGERS_COLLECTION=${TRIGGERS_COLLECTION:-triggers} \
     --env=LOGS_COLLECTION=${LOGS_COLLECTION:-logs} \
     localhost/mail-webhooks-backend:latest
-ExecStop=/usr/bin/podman stop --ignore --cidfile %t/mail-webhooks.ctr-id -t 10
-ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/mail-webhooks.ctr-id
-PIDFile=%t/mail-webhooks.pid
+ExecStop=/usr/bin/podman stop --ignore --cidfile /run/%i-mail-webhooks.ctr-id -t 10
+ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile /run/%i-mail-webhooks.ctr-id
+PIDFile=/run/%i-mail-webhooks.pid
 Type=forking
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

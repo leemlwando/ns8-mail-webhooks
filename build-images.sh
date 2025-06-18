@@ -35,11 +35,15 @@ buildah run \
 buildah add "${container}" imageroot /imageroot
 buildah add "${container}" ui/dist /ui
 
+# Set proper execute permissions on action scripts
+buildah run "${container}" -- find /imageroot/actions -type f -name "*[0-9][0-9]*" -exec chmod +x {} \;
+buildah run "${container}" -- find /imageroot/bin -type f -exec chmod +x {} \; 2>/dev/null || true
+
 # Setup the entrypoint, ask to reserve one TCP port with the label and set a rootless container
 buildah config --entrypoint=/ \
     --label="org.nethserver.authorizations=traefik@node:routeadm" \
     --label="org.nethserver.tcp-ports-demand=1" \
-    --label="org.nethserver.rootfull=0" \
+    --label="org.nethserver.rootfull=1" \
     --label="org.nethserver.images=" \
     "${container}"
 
