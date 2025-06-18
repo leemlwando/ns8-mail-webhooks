@@ -81,15 +81,7 @@
           </cv-form>
         </cv-tile>
       </cv-column>
-    </cv-row>
-  </cv-grid>
-</template>
-            >
-          </cv-form>
-        </cv-tile>
-      </cv-column>
-    </cv-row>
-  </cv-grid>
+    </cv-row>  </cv-grid>
 </template>
 
 <script>
@@ -196,7 +188,8 @@ export default {
       console.error(`${taskContext.action} aborted`, taskResult);
       this.error.getConfiguration = this.$t("error.generic_error");
       this.loading.getConfiguration = false;
-    },    getConfigurationCompleted(taskContext, taskResult) {
+    },
+    getConfigurationCompleted(taskContext, taskResult) {
       this.loading.getConfiguration = false;
       const config = taskResult.output;
 
@@ -265,7 +258,9 @@ export default {
       this.core.$root.$once(
         `${taskAction}-completed-${eventId}`,
         this.configureModuleCompleted
-      );      const res = await to(
+      );
+      
+      const res = await to(
         this.createModuleTaskForApp(this.instanceName, {
           action: taskAction,
           data: {
