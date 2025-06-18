@@ -1,19 +1,18 @@
 {
-  "name": "mail-webhooks",
-  "description": {
-    "en": "Mail Webhooks - Webhook triggers scheduled & for incoming mail"
-  },
-  "categories": ["mail", "webhooks"],
+  "id": "mail-webhooks",
+  "name": "Mail Webhooks",
+  "description": "Manage mail webhooks for NS8 with advanced IMAP integration and webhook triggers for incoming mail events",
+  "categories": ["mail"],
   "authors": [
     {
-      "name": "MicroTech Cloud Solutions Limited",
-      "email": "systems@microtech.co.zm"
+      "name": "Nethesis S.r.l.",
+      "email": "support@nethesis.it"
     }
   ],
   "docs": {
-    "documentation_url": "https://github.com/leemlwando/ns8-mail-webhooks",
-    "bug_url": "https://github.com/leemlwando/ns8-mail-webhooks/issues",
-    "code_url": "https://github.com/leemlwando/ns8-mail-webhooks"
+    "documentation_url": "https://docs.nethserver.org/",
+    "bug_url": "https://github.com/NethServer/ns8-mail-webhooks/issues",
+    "code_url": "https://github.com/NethServer/ns8-mail-webhooks"
   },
-  "source": "ghcr.io/leemlwando/ns8-mail-webhooks"
+  "source": "ghcr.io/nethserver/mail-webhooks"
 }

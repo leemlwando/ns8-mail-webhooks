@@ -26,9 +26,7 @@ try:
             'value': data.get("mongodb_url", ""),
             'error': 'mongodb_url_is_required'
         }], fp=sys.stdout)
-        sys.exit(3)
-
-    # Validate MongoDB URL format (basic check)
+        sys.exit(3)    # Validate MongoDB URL format (basic check)
     mongodb_url = data["mongodb_url"]
     if not (mongodb_url.startswith("mongodb://") or mongodb_url.startswith("mongodb+srv://")):
         agent.set_status('validation-failed')

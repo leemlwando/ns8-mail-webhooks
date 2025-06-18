@@ -142,7 +142,20 @@ def get_mongodb_url():
     """Get MongoDB URL from environment"""
     mongodb_url = os.getenv('MONGODB_URL')
     if not mongodb_url:
-        raise Exception("MONGODB_URL environment variable is required")
+        # Fallback to building from individual components if they exist
+        host = os.getenv('MONGODB_HOST')
+        port = os.getenv('MONGODB_PORT', '27017')
+        database = os.getenv('MONGODB_DATABASE')
+        username = os.getenv('MONGODB_USERNAME')
+        password = os.getenv('MONGODB_PASSWORD')
+        
+        if host and database:
+            if username and password:
+                mongodb_url = f"mongodb://{username}:{password}@{host}:{port}/{database}"
+            else:
+                mongodb_url = f"mongodb://{host}:{port}/{database}"
+        else:
+            raise Exception("MONGODB_URL environment variable is required or provide MONGODB_HOST and MONGODB_DATABASE")
     return mongodb_url
 
 def connect_to_mongodb(mongodb_url: str = None):

@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "create-webhook input",
+  "$id": "http://schema.nethserver.org/mail-webhooks/create-webhook-input.json",
+  "description": "Create a new webhook",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Webhook name",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "url": {
+      "type": "string",
+      "description": "Webhook URL",
+      "format": "uri"
+    },
+    "api_key": {
+      "type": "string",
+      "description": "API key for authentication (optional)",
+      "default": ""
+    },
+    "payload_type": {
+      "type": "string",
+      "description": "Payload format",
+      "enum": ["RAW", "JSON"],
+      "default": "JSON"
+    },
+    "trigger_type": {
+      "type": "string",
+      "description": "Trigger type",
+      "enum": ["realtime", "interval"],
+      "default": "realtime"
+    },
+    "interval": {
+      "type": "integer",
+      "description": "Interval in seconds (required for interval trigger)",
+      "minimum": 60,
+      "maximum": 86400,
+      "default": 60
+    },
+    "mailboxes": {
+      "type": "array",
+      "description": "List of mailboxes to monitor",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "filters": {
+      "type": "object",
+      "description": "Email filters",
+      "default": {}
+    },
+    "active": {
+      "type": "boolean",
+      "description": "Whether the webhook is active",
+      "default": true
+    }
+  },
+  "required": ["name", "url"],
+  "additionalProperties": false
+}

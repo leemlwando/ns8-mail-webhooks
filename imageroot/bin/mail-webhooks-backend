@@ -1,0 +1,3 @@
+#!/bin/bash
+# Minimal stub to start the backend, as in reference modules
+exec systemctl --user start mail-webhooks.service

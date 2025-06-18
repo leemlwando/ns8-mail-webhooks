@@ -1,5 +1,5 @@
 <!--
-  Copyright (C) 2023 Nethesis S.r.l.
+  Copyright (C) 2025 Nethesis S.r.l.
   SPDX-License-Identifier: GPL-3.0-or-later
 -->
 <template>
@@ -13,7 +13,7 @@
       <cv-column>
         <NsInlineNotification
           kind="error"
-          :title="$t('error.error')"
+          :title="$t('webhooks.list_webhooks')"
           :description="error.listWebhooks"
           :showCloseButton="false"
         />
@@ -22,257 +22,286 @@
     <cv-row>
       <cv-column>
         <cv-tile light>
-          <div class="webhooks-header">
-            <cv-button
+          <div class="webhook-actions mg-bottom">
+            <NsButton
               kind="primary"
-              @click="showCreateModal = true"
+              :icon="Add20"
+              @click="showCreateWebhookModal = true"
               :disabled="loading.listWebhooks"
             >
               {{ $t("webhooks.create_webhook") }}
-            </cv-button>
+            </NsButton>
+            <NsButton
+              kind="secondary"
+              :icon="Refresh20"
+              @click="listWebhooks"
+              :loading="loading.listWebhooks"
+            >
+              {{ $t("common.refresh") }}
+            </NsButton>
           </div>
-
-          <!-- Webhooks Table -->
+          
           <cv-data-table
-            v-if="!loading.listWebhooks && webhooks.length > 0"
-            :columns="columns"
+            :columns="webhookColumns"
             :data="webhooks"
-            :sortable="true"
-            :searchable="true"
-            :searchPlaceholder="$t('common.search')"
-            ref="webhooksTable"
+            :loading="loading.listWebhooks"
+            @sort="onSort"
           >
-            <template slot="data" slot-scope="{ row }">
-              <cv-data-table-row :key="row.id">
-                <cv-data-table-cell>{{ row.name }}</cv-data-table-cell>
-                <cv-data-table-cell>{{ row.url }}</cv-data-table-cell>
+            <template v-slot:data>
+              <cv-data-table-row
+                v-for="(webhook, index) in webhooks"
+                :key="webhook.id"
+              >
+                <cv-data-table-cell>{{ webhook.name }}</cv-data-table-cell>
+                <cv-data-table-cell>{{ webhook.url }}</cv-data-table-cell>
+                <cv-data-table-cell>{{ webhook.payload_type }}</cv-data-table-cell>
+                <cv-data-table-cell>{{ webhook.trigger_type }}</cv-data-table-cell>
                 <cv-data-table-cell>
                   <cv-tag
-                    :kind="row.payload_type === 'JSON' ? 'blue' : 'gray'"
-                    :label="
-                      $t(
-                        'webhooks.' + row.payload_type.toLowerCase() + '_format'
-                      )
-                    "
+                    :kind="webhook.active ? 'green' : 'red'"
+                    :label="webhook.active ? $t('common.active') : $t('common.inactive')"
                   />
                 </cv-data-table-cell>
                 <cv-data-table-cell>
-                  <cv-tag
-                    :kind="row.trigger_type === 'realtime' ? 'green' : 'purple'"
-                    :label="$t('webhooks.' + row.trigger_type)"
-                  />
+                  {{ formatDate(webhook.created_at) }}
                 </cv-data-table-cell>
                 <cv-data-table-cell>
-                  <cv-tag
-                    :kind="row.active ? 'green' : 'red'"
-                    :label="
-                      row.active ? $t('common.enabled') : $t('common.disabled')
-                    "
-                  />
+                  {{ webhook.last_triggered ? formatDate(webhook.last_triggered) : $t('common.never') }}
                 </cv-data-table-cell>
-                <cv-data-table-cell>{{
-                  formatDate(row.last_triggered)
-                }}</cv-data-table-cell>
                 <cv-data-table-cell>
-                  <cv-overflow-menu>
-                    <cv-overflow-menu-option @click="testWebhook(row)">
-                      {{ $t("webhooks.test_webhook") }}
-                    </cv-overflow-menu-option>
-                    <cv-overflow-menu-option @click="editWebhook(row)">
-                      {{ $t("common.edit") }}
-                    </cv-overflow-menu-option>
-                    <cv-overflow-menu-option
-                      danger
-                      @click="confirmDeleteWebhook(row)"
-                    >
-                      {{ $t("webhooks.delete_webhook") }}
-                    </cv-overflow-menu-option>
+                  <cv-overflow-menu tip-position="left" tip-alignment="end">
+                    <cv-overflow-menu-item @click="testWebhook(webhook)">
+                      <NsMenuItem :icon="Play20" :label="$t('webhooks.test_webhook')" />
+                    </cv-overflow-menu-item>
+                    <cv-overflow-menu-item @click="editWebhook(webhook)">
+                      <NsMenuItem :icon="Edit20" :label="$t('webhooks.edit_webhook')" />
+                    </cv-overflow-menu-item>
+                    <cv-overflow-menu-item @click="deleteWebhook(webhook)">
+                      <NsMenuItem :icon="TrashCan20" :label="$t('webhooks.delete_webhook')" />
+                    </cv-overflow-menu-item>
                   </cv-overflow-menu>
                 </cv-data-table-cell>
               </cv-data-table-row>
             </template>
-          </cv-data-table>
-          <!-- Empty State -->
-          <NsEmptyState
-            v-else-if="!loading.listWebhooks && webhooks.length === 0"
-            :title="$t('webhooks.no_webhooks')"
-            :description="$t('webhooks.no_webhooks_description')"
-          >
-            <template #action>
-              <cv-button kind="primary" @click="showCreateModal = true">
-                {{ $t("webhooks.create_webhook") }}
-              </cv-button>
+            <template v-slot:empty-state>
+              <cv-tile>
+                <NsEmptyState :title="$t('webhooks.no_webhooks')">
+                  <template #description>
+                    {{ $t('webhooks.no_webhooks_description') }}
+                  </template>
+                  <template #action>
+                    <NsButton
+                      kind="primary"
+                      :icon="Add20"
+                      @click="showCreateWebhookModal = true"
+                    >
+                      {{ $t("webhooks.create_webhook") }}
+                    </NsButton>
+                  </template>
+                </NsEmptyState>
+              </cv-tile>
             </template>
-          </NsEmptyState>
-
-          <!-- Loading State -->
-          <cv-skeleton-text
-            v-else-if="loading.listWebhooks"
-            :paragraph="true"
-            :line-count="3"
-          ></cv-skeleton-text>
+          </cv-data-table>
         </cv-tile>
       </cv-column>
     </cv-row>
 
     <!-- Create/Edit Webhook Modal -->
-    <cv-modal
-      :visible="showCreateModal || showEditModal"
-      :primary-button-text="
-        editingWebhook ? $t('common.save') : $t('common.create')
-      "
-      :secondary-button-text="$t('common.cancel')"
+    <NsModal
+      size="default"
+      :visible="showCreateWebhookModal || showEditWebhookModal"
+      @modal-hidden="onModalHidden"
       @primary-click="saveWebhook"
-      @secondary-click="closeModal"
-      @modal-hidden="closeModal"
-      :primary-button-disabled="loading.createWebhook || loading.updateWebhook"
-      size="large"
+      @secondary-click="onModalHidden"
+      :primary-button-disabled="loading.createWebhook"
+      :secondary-button-disabled="loading.createWebhook"
     >
-      <template slot="title">
-        {{
-          editingWebhook
-            ? $t("webhooks.edit_webhook")
-            : $t("webhooks.create_webhook")
-        }}
-      </template>
+      <template slot="title">{{
+        showEditWebhookModal
+          ? $t("webhooks.edit_webhook")
+          : $t("webhooks.create_webhook")
+      }}</template>
       <template slot="content">
-        <WebhookForm
-          ref="webhookForm"
-          :webhook="currentWebhook"
-          :loading="loading.createWebhook || loading.updateWebhook"
-          @input="currentWebhook = $event"
-        />
+        <cv-form @submit.prevent="saveWebhook">
+          <cv-text-input
+            :label="$t('webhooks.webhook_name')"
+            v-model="webhookForm.name"
+            :disabled="loading.createWebhook"
+            :invalid-message="error.webhookForm.name"
+            ref="webhookName"
+          />
+          
+          <cv-text-input
+            :label="$t('webhooks.webhook_url')"
+            v-model="webhookForm.url"
+            :disabled="loading.createWebhook"
+            :invalid-message="error.webhookForm.url"
+            ref="webhookUrl"
+          />
+          
+          <cv-text-input
+            :label="$t('webhooks.api_key')"
+            type="password"
+            v-model="webhookForm.api_key"
+            :disabled="loading.createWebhook"
+            :invalid-message="error.webhookForm.api_key"
+            ref="webhookApiKey"
+          />
+          
+          <cv-dropdown
+            :label="$t('webhooks.payload_type')"
+            v-model="webhookForm.payload_type"
+            :disabled="loading.createWebhook"
+          >
+            <cv-dropdown-item value="JSON">JSON</cv-dropdown-item>
+            <cv-dropdown-item value="RAW">RAW</cv-dropdown-item>
+          </cv-dropdown>
+          
+          <cv-dropdown
+            :label="$t('webhooks.trigger_type')"
+            v-model="webhookForm.trigger_type"
+            :disabled="loading.createWebhook"
+          >
+            <cv-dropdown-item value="realtime">{{ $t('webhooks.realtime') }}</cv-dropdown-item>
+            <cv-dropdown-item value="interval">{{ $t('webhooks.interval') }}</cv-dropdown-item>
+          </cv-dropdown>
+          
+          <cv-text-input
+            v-if="webhookForm.trigger_type === 'interval'"
+            :label="$t('webhooks.interval_seconds')"
+            type="number"
+            v-model="webhookForm.interval"
+            :disabled="loading.createWebhook"
+            :invalid-message="error.webhookForm.interval"
+            ref="webhookInterval"
+          />
+          
+          <cv-toggle
+            value="active"
+            :label="$t('webhooks.active')"
+            v-model="webhookForm.active"
+            :disabled="loading.createWebhook"
+          />
+        </cv-form>
       </template>
-    </cv-modal>
-
-    <!-- Delete Confirmation Modal -->
-    <NsModal
-      kind="danger"
-      :visible="showDeleteModal"
-      :primary-button-text="$t('common.delete')"
-      :secondary-button-text="$t('common.cancel')"
-      @primary-click="deleteWebhook"
-      @modal-hidden="showDeleteModal = false"
-      :primary-button-disabled="loading.deleteWebhook"
-    >
-      <template slot="title">{{ $t("webhooks.delete_webhook") }}</template>
-      <template slot="content">
-        <p>{{ $t("webhooks.confirm_delete") }}</p>
-        <p>
-          <strong>{{ webhookToDelete && webhookToDelete.name }}</strong>
-        </p>
-      </template>
-    </NsModal>
-
-    <!-- Test Result Modal -->
-    <NsModal
-      :visible="showTestModal"
-      :primary-button-text="$t('common.close')"
-      @primary-click="showTestModal = false"
-      @modal-hidden="showTestModal = false"
-      :show-secondary-button="false"
-    >
-      <template slot="title">{{ $t("webhooks.test_webhook") }}</template>
-      <template slot="content">
-        <div v-if="testResult">
-          <div class="test-result-status">
-            <cv-tag
-              :kind="testResult.success ? 'green' : 'red'"
-              :label="
-                testResult.success
-                  ? $t('webhooks.test_success')
-                  : $t('webhooks.test_failed')
-              "
-            />
-            <span class="test-status-code"
-              >{{ $t("common.status_code") }}:
-              {{ testResult.status_code }}</span
-            >
-            <span class="test-response-time"
-              >{{ $t("common.response_time") }}:
-              {{ testResult.response_time }}s</span
-            >
-          </div>
-          <div v-if="testResult.response_body" class="test-response">
-            <h5>{{ $t("common.response") }}:</h5>
-            <pre>{{ testResult.response_body }}</pre>
-          </div>
-          <div v-if="testResult.error" class="test-error">
-            <h5>{{ $t("error.error") }}:</h5>
-            <p>{{ testResult.error }}</p>
-          </div>
-        </div>
-      </template>
+      <template slot="secondary-button">{{ $t("common.cancel") }}</template>
+      <template slot="primary-button">{{
+        showEditWebhookModal ? $t("common.save") : $t("common.create")
+      }}</template>
     </NsModal>
   </cv-grid>
 </template>
 
 <script>
-import {
-  QueryParamService,
-  TaskService,
-  UtilService,
-  NsEmptyState,
-  NsModal,
-  NsInlineNotification,
-} from "@nethserver/ns8-ui-lib";
-import WebhookForm from "../components/WebhookForm.vue";
 import to from "await-to-js";
 import { mapState } from "vuex";
+import {
+  QueryParamService,
+  UtilService,
+  TaskService,
+  IconService,
+  PageTitleService,
+} from "@nethserver/ns8-ui-lib";
 
 export default {
   name: "Webhooks",
-  components: {
-    WebhookForm,
-    NsEmptyState,
-    NsModal,
-    NsInlineNotification,
+  mixins: [
+    TaskService,
+    IconService,
+    UtilService,
+    QueryParamService,
+    PageTitleService,
+  ],
+  pageTitle() {
+    return this.$t("webhooks.title") + " - " + this.appName;
   },
-  mixins: [QueryParamService, TaskService, UtilService],
   data() {
     return {
+      q: {
+        page: "webhooks",
+      },
+      urlCheckInterval: null,
       webhooks: [],
-      showCreateModal: false,
-      showEditModal: false,
-      showDeleteModal: false,
-      showTestModal: false,
+      showCreateWebhookModal: false,
+      showEditWebhookModal: false,
       editingWebhook: null,
-      webhookToDelete: null,
-      testResult: null,
-      currentWebhook: {
+      webhookForm: {
         name: "",
         url: "",
         api_key: "",
         payload_type: "JSON",
         trigger_type: "realtime",
-        interval: 300,
-        mailboxes: [],
-        filters: {},
+        interval: 60,
         active: true,
       },
-      columns: [
-        { key: "name", label: this.$t("webhooks.webhook_name") },
-        { key: "url", label: this.$t("webhooks.webhook_url") },
-        { key: "payload_type", label: this.$t("webhooks.payload_type") },
-        { key: "trigger_type", label: this.$t("webhooks.trigger_type") },
-        { key: "active", label: this.$t("webhooks.active") },
-        { key: "last_triggered", label: this.$t("webhooks.last_triggered") },
-        { key: "actions", label: this.$t("common.actions") },
+      webhookColumns: [
+        {
+          key: "name",
+          label: this.$t("webhooks.webhook_name"),
+          sortable: true,
+        },
+        {
+          key: "url",
+          label: this.$t("webhooks.webhook_url"),
+          sortable: true,
+        },
+        {
+          key: "payload_type",
+          label: this.$t("webhooks.payload_type"),
+          sortable: true,
+        },
+        {
+          key: "trigger_type",
+          label: this.$t("webhooks.trigger_type"),
+          sortable: true,
+        },
+        {
+          key: "active",
+          label: this.$t("common.status"),
+          sortable: true,
+        },
+        {
+          key: "created_at",
+          label: this.$t("webhooks.created_at"),
+          sortable: true,
+        },
+        {
+          key: "last_triggered",
+          label: this.$t("webhooks.last_triggered"),
+          sortable: true,
+        },
+        {
+          key: "actions",
+          label: "",
+        },
       ],
       loading: {
         listWebhooks: false,
         createWebhook: false,
-        updateWebhook: false,
-        deleteWebhook: false,
-        testWebhook: false,
       },
       error: {
         listWebhooks: "",
+        webhookForm: {
+          name: "",
+          url: "",
+          api_key: "",
+          interval: "",
+        },
       },
     };
   },
   computed: {
     ...mapState(["instanceName", "core", "appName"]),
+  },
+  beforeRouteEnter(to, from, next) {
+    next((vm) => {
+      vm.watchQueryData(vm);
+      vm.urlCheckInterval = vm.initUrlBindingForApp(vm, vm.q.page);
+    });
+  },
+  beforeRouteLeave(to, from, next) {
+    clearInterval(this.urlCheckInterval);
+    next();
   },
   created() {
     this.listWebhooks();
@@ -281,18 +310,17 @@ export default {
     async listWebhooks() {
       this.loading.listWebhooks = true;
       this.error.listWebhooks = "";
-
       const taskAction = "list-webhooks";
       const eventId = this.getUuid();
 
       // register to task error
-      this.$root.$once(
+      this.core.$root.$once(
         `${taskAction}-aborted-${eventId}`,
         this.listWebhooksAborted
       );
 
       // register to task completion
-      this.$root.$once(
+      this.core.$root.$once(
         `${taskAction}-completed-${eventId}`,
         this.listWebhooksCompleted
       );
@@ -323,257 +351,140 @@ export default {
     },
     listWebhooksCompleted(taskContext, taskResult) {
       this.loading.listWebhooks = false;
-      const output = taskResult.output;
-
-      if (taskResult.exit_code !== 0) {
-        console.error(`${taskContext.action} failed`, taskResult);
-        this.error.listWebhooks = this.getErrorMessage(taskResult);
-        return;
-      }
-
-      this.webhooks = output.webhooks || [];
+      this.webhooks = taskResult.output || [];
     },
-    editWebhook(webhook) {
-      this.editingWebhook = webhook;
-      this.currentWebhook = { ...webhook };
-      this.showEditModal = true;
-    },
-    confirmDeleteWebhook(webhook) {
-      this.webhookToDelete = webhook;
-      this.showDeleteModal = true;
-    },
-    async saveWebhook() {
-      // Validate form first
-      if (this.$refs.webhookForm && !this.$refs.webhookForm.validate()) {
-        return;
-      }
-
-      if (this.editingWebhook) {
-        await this.updateWebhook();
-      } else {
-        await this.createWebhook();
-      }
-    },
-    async createWebhook() {
-      this.loading.createWebhook = true;
-
-      const taskAction = "create-webhook";
-      const eventId = this.getUuid();
-
-      this.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.createWebhookCompleted
-      );
-
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          data: this.currentWebhook,
-          extra: {
-            title: this.$t("action." + taskAction),
-            eventId,
-          },
-        })
-      );
-      const err = res[0];
-
-      if (err) {
-        console.error(`error creating task ${taskAction}`, err);
-        this.loading.createWebhook = false;
-        return;
-      }
-    },
-    createWebhookCompleted(taskContext, taskResult) {
-      this.loading.createWebhook = false;
-
-      if (taskResult.exit_code !== 0) {
-        console.error(`${taskContext.action} failed`, taskResult);
-        return;
-      }
-
-      this.closeModal();
-      this.listWebhooks();
-      this.createNotificationSuccess(this.$t("webhooks.webhook_created"));
-    },
-    async updateWebhook() {
-      this.loading.updateWebhook = true;
-
-      const taskAction = "update-webhook";
-      const eventId = this.getUuid();
-
-      this.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.updateWebhookCompleted
-      );
-
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          data: {
-            id: this.editingWebhook.id,
-            ...this.currentWebhook,
-          },
-          extra: {
-            title: this.$t("action." + taskAction),
-            eventId,
-          },
-        })
-      );
-      const err = res[0];
-
-      if (err) {
-        console.error(`error creating task ${taskAction}`, err);
-        this.loading.updateWebhook = false;
-        return;
-      }
-    },
-    updateWebhookCompleted(taskContext, taskResult) {
-      this.loading.updateWebhook = false;
-
-      if (taskResult.exit_code !== 0) {
-        console.error(`${taskContext.action} failed`, taskResult);
-        return;
-      }
-
-      this.closeModal();
-      this.listWebhooks();
-      this.createNotificationSuccess(this.$t("webhooks.webhook_updated"));
-    },
-    async deleteWebhook() {
-      this.loading.deleteWebhook = true;
-
-      const taskAction = "delete-webhook";
-      const eventId = this.getUuid();
-
-      this.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.deleteWebhookCompleted
-      );
-
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          data: {
-            id: this.webhookToDelete.id,
-          },
-          extra: {
-            title: this.$t("action." + taskAction),
-            eventId,
-          },
-        })
-      );
-      const err = res[0];
-
-      if (err) {
-        console.error(`error creating task ${taskAction}`, err);
-        this.loading.deleteWebhook = false;
-        return;
-      }
-    },
-    deleteWebhookCompleted(taskContext, taskResult) {
-      this.loading.deleteWebhook = false;
-
-      if (taskResult.exit_code !== 0) {
-        console.error(`${taskContext.action} failed`, taskResult);
-        return;
-      }
-
-      this.showDeleteModal = false;
-      this.webhookToDelete = null;
-      this.listWebhooks();
-      this.createNotificationSuccess(this.$t("webhooks.webhook_deleted"));
-    },
-    async testWebhook(webhook) {
-      this.loading.testWebhook = true;
-
-      const taskAction = "test-webhook";
-      const eventId = this.getUuid();
-
-      this.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.testWebhookCompleted
-      );
-
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          data: {
-            id: webhook.id,
-          },
-          extra: {
-            title: this.$t("action." + taskAction),
-            eventId,
-          },
-        })
-      );
-      const err = res[0];
-
-      if (err) {
-        console.error(`error creating task ${taskAction}`, err);
-        this.loading.testWebhook = false;
-        return;
-      }
-    },
-    testWebhookCompleted(taskContext, taskResult) {
-      this.loading.testWebhook = false;
-
-      if (taskResult.exit_code !== 0) {
-        console.error(`${taskContext.action} failed`, taskResult);
-        return;
-      }
-
-      this.testResult = taskResult.output;
-      this.showTestModal = true;
-    },
-    closeModal() {
-      this.showCreateModal = false;
-      this.showEditModal = false;
-      this.editingWebhook = null;
-      this.currentWebhook = {
+    resetWebhookForm() {
+      this.webhookForm = {
         name: "",
         url: "",
         api_key: "",
         payload_type: "JSON",
         trigger_type: "realtime",
-        interval: 300,
-        mailboxes: [],
-        filters: {},
+        interval: 60,
         active: true,
       };
+      this.clearErrors(this);
+    },
+    onModalHidden() {
+      this.showCreateWebhookModal = false;
+      this.showEditWebhookModal = false;
+      this.editingWebhook = null;
+      this.resetWebhookForm();
+    },
+    editWebhook(webhook) {
+      this.editingWebhook = webhook;
+      this.webhookForm = { ...webhook };
+      this.showEditWebhookModal = true;
+      this.focusElement("webhookName");
+    },
+    async saveWebhook() {
+      if (!this.validateWebhookForm()) {
+        return;
+      }
+
+      this.loading.createWebhook = true;
+      const taskAction = this.showEditWebhookModal ? "update-webhook" : "create-webhook";
+      const eventId = this.getUuid();
+
+      // register to task error
+      this.core.$root.$once(
+        `${taskAction}-aborted-${eventId}`,
+        this.saveWebhookAborted
+      );
+
+      // register to task completion
+      this.core.$root.$once(
+        `${taskAction}-completed-${eventId}`,
+        this.saveWebhookCompleted
+      );
+
+      const taskData = { ...this.webhookForm };
+      if (this.showEditWebhookModal && this.editingWebhook) {
+        taskData.id = this.editingWebhook.id;
+      }
+
+      const res = await to(
+        this.createModuleTaskForApp(this.instanceName, {
+          action: taskAction,
+          data: taskData,
+          extra: {
+            title: this.$t("webhooks." + taskAction.replace("-", "_")),
+            description: this.$t("common.processing"),
+            eventId,
+          },
+        })
+      );
+      const err = res[0];
+
+      if (err) {
+        console.error(`error creating task ${taskAction}`, err);
+        this.error.createWebhook = this.getErrorMessage(err);
+        this.loading.createWebhook = false;
+        return;
+      }
+    },
+    saveWebhookAborted(taskResult, taskContext) {
+      console.error(`${taskContext.action} aborted`, taskResult);
+      this.error.createWebhook = this.$t("error.generic_error");
+      this.loading.createWebhook = false;
+    },
+    saveWebhookCompleted() {
+      this.loading.createWebhook = false;
+      this.onModalHidden();
+      this.listWebhooks(); // Refresh the list
+    },
+    validateWebhookForm() {
+      this.clearErrors(this);
+      let isValidationOk = true;
+
+      if (!this.webhookForm.name) {
+        this.error.webhookForm.name = this.$t("common.required");
+        if (isValidationOk) {
+          this.focusElement("webhookName");
+          isValidationOk = false;
+        }
+      }
+
+      if (!this.webhookForm.url) {
+        this.error.webhookForm.url = this.$t("common.required");
+        if (isValidationOk) {
+          this.focusElement("webhookUrl");
+          isValidationOk = false;
+        }
+      }
+
+      return isValidationOk;
+    },
+    async testWebhook(webhook) {
+      // Implementation for testing webhook
+      console.log("Testing webhook:", webhook);
+    },
+    async deleteWebhook(webhook) {
+      // Implementation for deleting webhook
+      console.log("Deleting webhook:", webhook);
     },
     formatDate(dateString) {
-      if (!dateString) return this.$t("webhooks.never");
+      if (!dateString) return "";
       return new Date(dateString).toLocaleString();
+    },
+    onSort(sortData) {
+      // Implementation for sorting
+      console.log("Sort data:", sortData);
     },
   },
 };
 </script>
 
 <style scoped lang="scss">
-.webhooks-header {
+@import "../styles/carbon-utils";
+
+.webhook-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+  gap: $spacing-05;
+  margin-bottom: $spacing-06;
 }
 
-.test-result-status {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.test-response,
-.test-error {
-  margin-top: 1rem;
-}
-
-.test-response pre {
-  background-color: #f4f4f4;
-  padding: 1rem;
-  border-radius: 4px;
-  max-height: 200px;
-  overflow-y: auto;
+.mg-bottom {
+  margin-bottom: $spacing-06;
 }
 </style>

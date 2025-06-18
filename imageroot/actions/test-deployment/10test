@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import os
+import subprocess
+import agent
+
+# Test deployment functionality
+
+def test_environment_variables():
+    """Test if required environment variables are set"""
+    required_vars = ['MODULE_ID', 'TCP_PORT']
+    missing_vars = []
+    
+    for var in required_vars:
+        if not os.environ.get(var):
+            missing_vars.append(var)
+    
+    return len(missing_vars) == 0, missing_vars
+
+def test_systemd_service():
+    """Test if systemd service is properly configured"""
+    try:
+        # Check if service file exists
+        service_file = f"/home/{os.environ.get('MODULE_ID', 'mail-webhooks')}/.config/systemd/user/mail-webhooks.service"
+        if not os.path.exists(service_file):
+            return False, "Service file not found"
+        
+        # Check service status
+        result = subprocess.run(['systemctl', '--user', 'status', 'mail-webhooks.service'], 
+                              capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            return True, "Service is running"
+        else:
+            return False, f"Service not running: {result.stderr}"
+    except Exception as e:
+        return False, f"Service check failed: {str(e)}"
+
+def test_image_availability():
+    """Test if container image is available"""
+    try:
+        image_name = os.environ.get('MAIL_WEBHOOKS_IMAGE', 'ghcr.io/nethserver/mail-webhooks:latest')
+        result = subprocess.run(['podman', 'inspect', image_name], 
+                              capture_output=True, text=True)
+        return result.returncode == 0, image_name
+    except Exception as e:
+        return False, f"Image check failed: {str(e)}"
+
+def test_port_binding():
+    """Test if TCP port is properly configured"""
+    try:
+        tcp_port = os.environ.get('TCP_PORT')
+        if not tcp_port:
+            return False, "TCP_PORT not configured"
+        
+        # Test if port is in valid range
+        port_num = int(tcp_port)
+        if port_num < 1024 or port_num > 65535:
+            return False, f"Invalid port number: {port_num}"
+        
+        return True, f"Port {tcp_port} configured"
+    except ValueError:
+        return False, "Invalid port format"
+    except Exception as e:
+        return False, f"Port test failed: {str(e)}"
+
+def run_deployment_tests():
+    """Run all deployment tests"""
+    results = {}
+    
+    # Test environment variables
+    env_test, env_data = test_environment_variables()
+    results["environment"] = {
+        "name": "Environment Variables",
+        "description": "Check required environment variables",
+        "status": "pass" if env_test else "fail",
+        "details": "All required variables set" if env_test else f"Missing: {env_data}"
+    }
+    
+    # Test systemd service
+    service_test, service_msg = test_systemd_service()
+    results["systemd"] = {
+        "name": "Systemd Service",
+        "description": "Check systemd service configuration",
+        "status": "pass" if service_test else "fail",
+        "details": service_msg
+    }
+    
+    # Test container image
+    image_test, image_msg = test_image_availability()
+    results["image"] = {
+        "name": "Container Image",
+        "description": "Check container image availability",
+        "status": "pass" if image_test else "fail",
+        "details": f"Image available: {image_msg}" if image_test else image_msg
+    }
+    
+    # Test port configuration
+    port_test, port_msg = test_port_binding()
+    results["port"] = {
+        "name": "Port Configuration",
+        "description": "Check TCP port configuration",
+        "status": "pass" if port_test else "fail",
+        "details": port_msg
+    }
+    
+    # Overall status
+    all_passed = all(test["status"] == "pass" for test in results.values())
+    results["overall"] = {
+        "name": "Overall Deployment",
+        "description": "Overall deployment health",
+        "status": "pass" if all_passed else "fail"
+    }
+    
+    return results
+
+try:
+    deployment_results = run_deployment_tests()
+    json.dump(deployment_results, fp=sys.stdout, indent=2)
+    sys.exit(0)
+    
+except Exception as e:
+    print(f"Error running deployment tests: {e}", file=sys.stderr)
+    json.dump({"error": str(e)}, fp=sys.stdout)
+    sys.exit(1)

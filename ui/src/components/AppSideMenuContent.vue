@@ -1,5 +1,5 @@
 <!--
-  Copyright (C) 2023 Nethesis S.r.l.
+  Copyright (C) 2025 Nethesis S.r.l.
   SPDX-License-Identifier: GPL-3.0-or-later
 -->
 <template>
@@ -12,8 +12,8 @@
         :width="instanceNameSkeletonWidth"
       ></cv-skeleton-text>
     </div>
-    <cv-side-nav-items>
-      <cv-side-nav-link
+
+    <cv-side-nav-items>      <cv-side-nav-link
         @click="goToAppPage(instanceName, 'status')"
         :class="{ 'current-page': isLinkActive('status') }"
       >
@@ -24,7 +24,7 @@
         @click="goToAppPage(instanceName, 'webhooks')"
         :class="{ 'current-page': isLinkActive('webhooks') }"
       >
-        <template v-slot:nav-icon><Activity20 /></template>
+        <template v-slot:nav-icon><Events20 /></template>
         <span>{{ $t("webhooks.title") }}</span>
       </cv-side-nav-link>
       <cv-side-nav-link
@@ -49,15 +49,16 @@
 import Settings20 from "@carbon/icons-vue/es/settings/20";
 import Information20 from "@carbon/icons-vue/es/information/20";
 import Activity20 from "@carbon/icons-vue/es/activity/20";
+import Events20 from "@carbon/icons-vue/es/events/20";
 import { mapState } from "vuex";
 import { QueryParamService, UtilService } from "@nethserver/ns8-ui-lib";
 
 export default {
-  name: "AppSideMenuContent",
-  components: {
+  name: "AppSideMenuContent",  components: {
     Settings20,
     Information20,
     Activity20,
+    Events20,
   },
   mixins: [QueryParamService, UtilService],
   data() {

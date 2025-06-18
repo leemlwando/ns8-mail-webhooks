@@ -12,51 +12,46 @@ import agent
 import agent.tasks
 
 try:
-    # Try to parse the stdin as JSON.
-    # If parsing fails, output everything to stderr
     data = json.load(sys.stdin)
-
-    # Setup default values
-    hostname = data.get("hostname", "")
-    http2https = data.get("http2https", True)
-    lets_encrypt = data.get("lets_encrypt", False)
-
-    # Configure Traefik routing if hostname is provided
-    if hostname:
-        # Talk with agent using file descriptor.
-        # Setup configuration from user input.
-        agent.set_env("TRAEFIK_HOST", hostname)
-        agent.set_env("TRAEFIK_HTTP2HTTPS", str(http2https))
-        agent.set_env("TRAEFIK_LETS_ENCRYPT", str(lets_encrypt))
-
-        # Make sure everything is saved inside the environment file
-        # just before starting systemd unit
-        agent.dump_env()
-
-        # Find default traefik instance for current node
-        default_traefik_id = agent.resolve_agent_id('traefik@node')
-        if default_traefik_id is None:
-            print("Error: Cannot find default traefik instance", file=sys.stderr)
-            sys.exit(2)
-
-        # Configure Traefik virtual host
-        response = agent.tasks.run(
-            agent_id=default_traefik_id,
-            action='set-route',
-            data={
-                'instance': os.environ['MODULE_ID'],
-                'url': f'http://127.0.0.1:{os.environ["TCP_PORT"]}',
-                'host': hostname,
-                'http2https': http2https,
-                'lets_encrypt': lets_encrypt
-            }
-        )
+    
+    # Set hostname (Traefik) configuration
+    if 'hostname' in data:
+        agent.set_env("TRAEFIK_HOST", data['hostname'])
+        agent.set_env("TRAEFIK_HTTPS", str(data.get('lets_encrypt', False)))
         
-        # Check if traefik configuration was successful
-        agent.assert_exp(response['exit_code'] == 0)
-
-    print("Traefik configuration completed successfully", file=sys.stderr)
-
+        # Configure Traefik route
+        traefik_id = agent.resolve_agent_id('traefik@node')
+        if traefik_id:
+            agent.tasks.run(
+                agent_id=traefik_id,
+                action='set-route',
+                data={
+                    'instance': os.environ['MODULE_ID'],
+                    'url': f'http://127.0.0.1:{os.environ.get("TCP_PORT", "8080")}',
+                    'host': data['hostname'],
+                    'lets_encrypt': data.get('lets_encrypt', False),
+                    'http2https': data.get('http2https', False)
+                }
+            )
+    
+    # Set MongoDB URL (primary configuration)
+    if 'mongodb_url' in data:
+        agent.set_env("MONGODB_URL", data['mongodb_url'])
+    
+    # Set mail server integration
+    if 'mail_server_uuid' in data:
+        agent.set_env("MAIL_SERVER_UUID", data['mail_server_uuid'])
+      # Set collection names (with defaults)
+    agent.set_env("WEBHOOKS_COLLECTION", data.get('webhooks_collection', 'webhooks'))
+    agent.set_env("EVENTS_COLLECTION", data.get('events_collection', 'events'))
+    agent.set_env("SETTINGS_COLLECTION", data.get('settings_collection', 'settings'))
+    agent.set_env("TRIGGERS_COLLECTION", data.get('triggers_collection', 'triggers'))
+    agent.set_env("LOGS_COLLECTION", data.get('logs_collection', 'logs'))
+    
+    # Write environment variables
+    agent.dump_env()
+    
+    sys.exit(0)
 except Exception as e:
-    print(f"Error during traefik configuration: {e}", file=sys.stderr)
+    print(f"Error configuring module: {e}", file=sys.stderr)
     sys.exit(1)

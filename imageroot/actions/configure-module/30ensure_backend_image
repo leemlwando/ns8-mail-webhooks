@@ -10,37 +10,13 @@ import sys
 import agent
 
 try:
-    # Get the backend image name from environment
     backend_image = os.environ.get('BACKEND_IMAGE', 'ghcr.io/nethserver/mail-webhooks-backend:latest')
-    
-    # Build the backend image if it doesn't exist locally or is set to localhost
-    if backend_image.startswith('localhost/') or backend_image.startswith('ghcr.io/'):
-        print(f"Ensuring backend image is available: {backend_image}", file=sys.stderr)
-        
-        # Check if we need to build the image locally
-        if backend_image.startswith('localhost/'):
-            # Build the backend image from the API directory
-            api_dir = "/imageroot/api"
-            if os.path.exists(api_dir):
-                build_result = agent.run_helper(
-                    "podman", "build", "-t", backend_image, api_dir
-                )
-                build_result.check_returncode()
-                print(f"Backend image built successfully: {backend_image}", file=sys.stderr)
-            else:
-                print(f"Warning: API directory not found at {api_dir}", file=sys.stderr)
-        else:
-            # Try to pull the image from registry
-            try:
-                pull_result = agent.run_helper("podman", "pull", backend_image)
-                pull_result.check_returncode()
-                print(f"Backend image pulled successfully: {backend_image}", file=sys.stderr)
-            except Exception as pull_error:
-                print(f"Warning: Could not pull backend image {backend_image}: {pull_error}", file=sys.stderr)
-    
-    print("Backend image setup completed", file=sys.stderr)
-
+    if backend_image:
+        try:
+            agent.run_helper("podman", "pull", backend_image).check_returncode()
+        except Exception as e:
+            print(f"Warning: Could not pull backend image: {e}", file=sys.stderr)
+    sys.exit(0)
 except Exception as e:
     print(f"Error ensuring backend image: {e}", file=sys.stderr)
-    # Don't fail the entire configuration if image setup fails
     sys.exit(0)

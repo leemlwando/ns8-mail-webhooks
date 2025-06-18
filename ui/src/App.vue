@@ -1,5 +1,5 @@
 <!--
-  Copyright (C) 2023 Nethesis S.r.l.
+  Copyright (C) 2025 Nethesis S.r.l.
   SPDX-License-Identifier: GPL-3.0-or-later
 -->
 <template>
@@ -33,6 +33,7 @@ export default {
   created() {
     const core = window.parent.core;
     this.setCoreInStore(core);
+
     const instanceName = /#\/apps\/([a-zA-Z0-9_-]+)/.exec(
       window.parent.location.hash
     )[1];

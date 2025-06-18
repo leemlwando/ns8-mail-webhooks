@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import os
+import subprocess
+import time
+
+# Test the mail webhooks module functionality
+
+def test_service_status():
+    """Test if the systemd service is running"""
+    try:
+        result = subprocess.run(['systemctl', '--user', 'is-active', 'mail-webhooks.service'], 
+                              capture_output=True, text=True)
+        return result.returncode == 0 and result.stdout.strip() == 'active'
+    except Exception:
+        return False
+
+def test_api_endpoint():
+    """Test if the API endpoint is responding"""
+    try:
+        import socket
+        port = int(os.environ.get('TCP_PORT', '8080'))
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        result = sock.connect_ex(('127.0.0.1', port))
+        sock.close()
+        return result == 0
+    except Exception:
+        return False
+
+def test_mongodb_connection():
+    """Test MongoDB connection"""
+    mongodb_url = os.environ.get('MONGODB_URL')
+    if not mongodb_url:
+        return False, "MongoDB URL not configured"
+    
+    try:
+        # Simple connection test using pymongo if available
+        from pymongo import MongoClient
+        client = MongoClient(mongodb_url, serverSelectionTimeoutMS=5000)
+        client.admin.command('ping')
+        client.close()
+        return True, "MongoDB connection successful"
+    except ImportError:
+        return False, "PyMongo not available"
+    except Exception as e:
+        return False, f"MongoDB connection failed: {str(e)}"
+
+def run_tests():
+    """Run all tests and return results"""
+    results = {
+        "service_status": {
+            "name": "Service Status",
+            "description": "Check if mail-webhooks service is running",
+            "status": "pass" if test_service_status() else "fail"
+        },
+        "api_endpoint": {
+            "name": "API Endpoint",
+            "description": "Check if API endpoint is accessible",
+            "status": "pass" if test_api_endpoint() else "fail"
+        }
+    }
+    
+    # Test MongoDB connection
+    mongo_test, mongo_msg = test_mongodb_connection()
+    results["mongodb_connection"] = {
+        "name": "MongoDB Connection",
+        "description": "Check MongoDB connectivity",
+        "status": "pass" if mongo_test else "fail",
+        "message": mongo_msg
+    }
+    
+    # Calculate overall status
+    all_passed = all(test["status"] == "pass" for test in results.values())
+    results["overall"] = {
+        "name": "Overall Status",
+        "description": "Overall module health",
+        "status": "pass" if all_passed else "fail"
+    }
+    
+    return results
+
+try:
+    test_results = run_tests()
+    json.dump(test_results, fp=sys.stdout, indent=2)
+    sys.exit(0)
+    
+except Exception as e:
+    print(f"Error running tests: {e}", file=sys.stderr)
+    json.dump({"error": str(e)}, fp=sys.stdout)
+    sys.exit(1)

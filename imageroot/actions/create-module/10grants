@@ -18,30 +18,10 @@ except ImportError as e:
     sys.exit(1)
 
 try:
-    # Allow other modules to read module configuration and status
-    print("Setting up reader permissions...", file=sys.stderr)
-    agent.run_helper("redis-exec", "SADD", f"{agent.get_agent_uid()}/roles/reader", 
-        "get-*", "list-*").check_returncode()
-
-    # Allow the instance itself to run some subtasks during operations
-    print("Setting up selfadm permissions...", file=sys.stderr)
-    agent.run_helper("redis-exec", "SADD", f"{agent.get_agent_uid()}/roles/selfadm",
-        "configure-module",
-        "get-configuration",
-        "create-webhook",
-        "update-webhook", 
-        "delete-webhook",
-        "list-webhooks",
-        "test-webhook",
-        "start-mail-monitor",
-        "stop-mail-monitor",
-        "get-mail-monitor-status"
-    ).check_returncode()
-
-    print("Grants setup completed successfully", file=sys.stderr)
-    sys.exit(0)  # Explicit success exit
-
+    # Minimal grants as in kickstart
+    agent.run_helper("redis-exec", "SADD", f"{agent.get_agent_uid()}/roles/reader", "get-*").check_returncode()
+    agent.run_helper("redis-exec", "SADD", f"{agent.get_agent_uid()}/roles/selfadm", "configure-module", "get-configuration").check_returncode()
+    sys.exit(0)
 except Exception as e:
     print(f"Error setting up grants: {e}", file=sys.stderr)
-    print(f"Agent UID: {agent.get_agent_uid()}", file=sys.stderr)
     sys.exit(1)

@@ -8,34 +8,19 @@
 import json
 import sys
 import os
-import agent
 
-# Read current configuration from environment
 config = {
+    "hostname": os.getenv("TRAEFIK_HOST", ""),
+    "lets_encrypt": os.getenv("TRAEFIK_HTTPS", "False").lower() in ('true', '1', 't'),
+    "http2https": os.getenv("TRAEFIK_HTTPS", "False").lower() in ('true', '1', 't'),
     "mongodb_url": os.getenv("MONGODB_URL", ""),
     "mail_server_uuid": os.getenv("MAIL_SERVER_UUID", ""),
-    "http2https": os.getenv("TRAEFIK_HTTP2HTTPS", "False") == "True",
-    "lets_encrypt": os.getenv("TRAEFIK_LETS_ENCRYPT", "False") == "True",
+    "webhooks_collection": os.getenv("WEBHOOKS_COLLECTION", "webhooks"),
+    "events_collection": os.getenv("EVENTS_COLLECTION", "events"),
+    "settings_collection": os.getenv("SETTINGS_COLLECTION", "settings"),
+    "triggers_collection": os.getenv("TRIGGERS_COLLECTION", "triggers"),
+    "logs_collection": os.getenv("LOGS_COLLECTION", "logs")
 }
 
-# Get available mail servers from service discovery
-rdb = agent.redis_connect()
-mail_servers = []
-
-try:
-    # Find all mail server instances
-    for provider in agent.list_service_providers(rdb, 'imap', 'tcp'):
-        mail_servers.append({
-            "uuid": provider['module_uuid'],
-            "module_id": provider['module_id'],
-            "host": provider['host'],
-            "user_domain": provider.get('user_domain', ''),
-        })
-except Exception as e:
-    print(f"Warning: Could not retrieve mail servers: {e}", file=sys.stderr)
-
-config["available_mail_servers"] = mail_servers
-
-# Output configuration as JSON
-json.dump(config, fp=sys.stdout, indent=2)
-sys.exit(0)  # Explicit success exit
+json.dump(config, fp=sys.stdout)
+sys.exit(0)

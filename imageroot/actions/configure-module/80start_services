@@ -33,3 +33,6 @@ fi
 echo "Mail monitor service disabled - Phase 1 implementation (API only)"
 
 echo "Service startup completed successfully"
+
+systemctl --user daemon-reload
+systemctl --user restart mail-webhooks.service

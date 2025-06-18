@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import os
+
+# Create webhook action - this will be called by the UI
+# The data from stdin contains the webhook to create
+
+try:
+    # Parse input data
+    data = json.load(sys.stdin)
+    
+    # Get the API endpoint
+    api_port = os.environ.get('TCP_PORT', '8080')
+    api_url = f"http://127.0.0.1:{api_port}/api/webhooks"
+    
+    # Import requests here to handle it gracefully
+    try:
+        import requests
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        
+        # Make API request to create webhook
+        response = requests.post(api_url, json=data, timeout=10)
+        
+        if response.status_code in [200, 201]:
+            result = response.json()
+            json.dump(result, fp=sys.stdout)
+        else:
+            print(f"API request failed: {response.status_code} - {response.text}", file=sys.stderr)
+            json.dump({"error": f"API request failed: {response.status_code}"}, fp=sys.stdout)
+            sys.exit(1)
+        
+    except ImportError:
+        # Fallback if requests is not available
+        print("requests library not available", file=sys.stderr)
+        json.dump({"error": "Backend API not available"}, fp=sys.stdout)
+        sys.exit(1)
+    
+    sys.exit(0)
+    
+except Exception as e:
+    print(f"Error creating webhook: {e}", file=sys.stderr)
+    json.dump({"error": str(e)}, fp=sys.stdout)
+    sys.exit(1)

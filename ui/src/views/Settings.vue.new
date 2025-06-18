@@ -21,20 +21,21 @@
     </cv-row>
     <cv-row>
       <cv-column>
-        <cv-tile light>          <cv-form @submit.prevent="configureModule">
+        <cv-tile light>
+          <cv-form @submit.prevent="configureModule">
             <cv-text-input
-              :label="$t('settings.hostname')"
-              v-model="hostname"
+              :label="$t('settings.traefik_host')"
+              v-model="traefik_host"
               :placeholder="$t('settings.mail_webhooks_fqdn_placeholder')"
               :disabled="loading.getConfiguration || loading.configureModule"
-              :invalid-message="error.hostname"
-              ref="hostname"
+              :invalid-message="error.traefik_host"
+              ref="traefik_host"
             ></cv-text-input>
             
             <cv-toggle
               value="lets_encrypt"
               :label="$t('settings.request_lets_encrypt_certificate')"
-              v-model="lets_encrypt"
+              v-model="request_https_certificate"
               :disabled="loading.getConfiguration || loading.configureModule"
               class="mg-bottom"
             >
@@ -43,68 +44,84 @@
             <h4 class="mg-bottom">{{ $t('settings.mongodb_connection') }}</h4>
             
             <cv-text-input
-              :label="$t('settings.mongodb_url')"
-              v-model="mongodb_url"
-              :placeholder="$t('settings.mongodb_url_placeholder')"
+              :label="$t('settings.mongodb_host')"
+              v-model="mongodb_host"
               :disabled="loading.getConfiguration || loading.configureModule"
-              :invalid-message="error.mongodb_url"
-              ref="mongodb_url"
+              :invalid-message="error.mongodb_host"
+              ref="mongodb_host"
             ></cv-text-input>
 
             <cv-text-input
-              :label="$t('settings.mail_server_uuid')"
-              v-model="mail_server_uuid"
-              :placeholder="$t('settings.mail_server_uuid_placeholder')"
+              :label="$t('settings.mongodb_port')"
+              v-model="mongodb_port"
               :disabled="loading.getConfiguration || loading.configureModule"
-              :invalid-message="error.mail_server_uuid"
-              ref="mail_server_uuid"
+              :invalid-message="error.mongodb_port"
+              ref="mongodb_port"
             ></cv-text-input>
+
+            <cv-text-input
+              :label="$t('settings.mongodb_database')"
+              v-model="mongodb_database"
+              :disabled="loading.getConfiguration || loading.configureModule"
+              :invalid-message="error.mongodb_database"
+              ref="mongodb_database"
+            ></cv-text-input>
+
+            <cv-text-input
+              :label="$t('settings.mongodb_username')"
+              v-model="mongodb_username"
+              :disabled="loading.getConfiguration || loading.configureModule"
+              :invalid-message="error.mongodb_username"
+              ref="mongodb_username"
+            ></cv-text-input>
+
+            <cv-text-input
+              :label="$t('settings.mongodb_password')"
+              type="password"
+              v-model="mongodb_password"
+              :disabled="loading.getConfiguration || loading.configureModule"
+              :invalid-message="error.mongodb_password"
+              ref="mongodb_password"
+            ></cv-text-input>
+
+            <cv-toggle
+              value="mail_integration"
+              :label="$t('settings.enable_mail_integration')"
+              v-model="enable_mail_integration"
+              :disabled="loading.getConfiguration || loading.configureModule"
+              class="mg-bottom"
+            >
+            </cv-toggle>
 
             <!-- advanced options -->
             <cv-accordion ref="accordion" class="maxwidth mg-bottom">
               <cv-accordion-item :open="toggleAccordion[0]">
                 <template slot="title">{{ $t("settings.advanced") }}</template>
                 <template slot="content">
-                  <h5 class="mg-bottom">{{ $t('settings.collection_names') }}</h5>
+                  <h5 class="mg-bottom">{{ $t('settings.webhook_processing') }}</h5>
                   
                   <cv-text-input
-                    :label="$t('settings.webhooks_collection')"
-                    v-model="webhooks_collection"
+                    :label="$t('settings.max_concurrent_webhooks')"
+                    v-model="max_concurrent_webhooks"
                     :disabled="loading.getConfiguration || loading.configureModule"
-                    :invalid-message="error.webhooks_collection"
-                    ref="webhooks_collection"
+                    :invalid-message="error.max_concurrent_webhooks"
+                    ref="max_concurrent_webhooks"
                   ></cv-text-input>
 
                   <cv-text-input
-                    :label="$t('settings.events_collection')"
-                    v-model="events_collection"
+                    :label="$t('settings.webhook_timeout')"
+                    v-model="webhook_timeout"
                     :disabled="loading.getConfiguration || loading.configureModule"
-                    :invalid-message="error.events_collection"
-                    ref="events_collection"
+                    :invalid-message="error.webhook_timeout"
+                    ref="webhook_timeout"
                   ></cv-text-input>
 
                   <cv-text-input
-                    :label="$t('settings.settings_collection')"
-                    v-model="settings_collection"
+                    :label="$t('settings.retry_attempts')"
+                    v-model="retry_attempts"
                     :disabled="loading.getConfiguration || loading.configureModule"
-                    :invalid-message="error.settings_collection"
-                    ref="settings_collection"
-                  ></cv-text-input>
-
-                  <cv-text-input
-                    :label="$t('settings.triggers_collection')"
-                    v-model="triggers_collection"
-                    :disabled="loading.getConfiguration || loading.configureModule"
-                    :invalid-message="error.triggers_collection"
-                    ref="triggers_collection"
-                  ></cv-text-input>
-
-                  <cv-text-input
-                    :label="$t('settings.logs_collection')"
-                    v-model="logs_collection"
-                    :disabled="loading.getConfiguration || loading.configureModule"
-                    :invalid-message="error.logs_collection"
-                    ref="logs_collection"
+                    :invalid-message="error.retry_attempts"
+                    ref="retry_attempts"
                   ></cv-text-input>
                 </template>
               </cv-accordion-item>
@@ -156,21 +173,24 @@ export default {
   ],
   pageTitle() {
     return this.$t("settings.title") + " - " + this.appName;
-  },  data() {
+  },
+  data() {
     return {
       q: {
         page: "settings",
       },
       urlCheckInterval: null,
-      hostname: "",
-      lets_encrypt: false,
-      mongodb_url: "",
-      mail_server_uuid: "",
-      webhooks_collection: "webhooks",
-      events_collection: "events",
-      settings_collection: "settings",
-      triggers_collection: "triggers",
-      logs_collection: "logs",
+      traefik_host: "",
+      request_https_certificate: false,
+      mongodb_host: "",
+      mongodb_port: "27017",
+      mongodb_database: "",
+      mongodb_username: "",
+      mongodb_password: "",
+      enable_mail_integration: true,
+      max_concurrent_webhooks: "10",
+      webhook_timeout: "30",
+      retry_attempts: "3",
       toggleAccordion: [false],
       loading: {
         getConfiguration: false,
@@ -179,14 +199,15 @@ export default {
       error: {
         getConfiguration: "",
         configureModule: "",
-        hostname: "",
-        mongodb_url: "",
-        mail_server_uuid: "",
-        webhooks_collection: "",
-        events_collection: "",
-        settings_collection: "",
-        triggers_collection: "",
-        logs_collection: "",
+        traefik_host: "",
+        mongodb_host: "",
+        mongodb_port: "",
+        mongodb_database: "",
+        mongodb_username: "",
+        mongodb_password: "",
+        max_concurrent_webhooks: "",
+        webhook_timeout: "",
+        retry_attempts: "",
       },
     };
   },
@@ -248,30 +269,52 @@ export default {
       console.error(`${taskContext.action} aborted`, taskResult);
       this.error.getConfiguration = this.$t("error.generic_error");
       this.loading.getConfiguration = false;
-    },    getConfigurationCompleted(taskContext, taskResult) {
+    },
+    getConfigurationCompleted(taskContext, taskResult) {
       this.loading.getConfiguration = false;
       const config = taskResult.output;
 
-      this.hostname = config.hostname || "";
-      this.lets_encrypt = config.lets_encrypt || false;
-      this.mongodb_url = config.mongodb_url || "";
-      this.mail_server_uuid = config.mail_server_uuid || "";
-      this.webhooks_collection = config.webhooks_collection || "webhooks";
-      this.events_collection = config.events_collection || "events";
-      this.settings_collection = config.settings_collection || "settings";
-      this.triggers_collection = config.triggers_collection || "triggers";
-      this.logs_collection = config.logs_collection || "logs";
+      this.traefik_host = config.traefik_host || "";
+      this.request_https_certificate = config.request_https_certificate || false;
+      this.mongodb_host = config.mongodb_host || "";
+      this.mongodb_port = config.mongodb_port || "27017";
+      this.mongodb_database = config.mongodb_database || "";
+      this.mongodb_username = config.mongodb_username || "";
+      this.mongodb_password = config.mongodb_password || "";
+      this.enable_mail_integration = config.enable_mail_integration !== false;
+      this.max_concurrent_webhooks = config.max_concurrent_webhooks || "10";
+      this.webhook_timeout = config.webhook_timeout || "30";
+      this.retry_attempts = config.retry_attempts || "3";
 
-      this.focusElement("hostname");
-    },    validateConfigureModule() {
+      this.focusElement("traefik_host");
+    },
+    validateConfigureModule() {
       this.clearErrors(this);
       let isValidationOk = true;
 
-      if (!this.mongodb_url) {
-        this.error.mongodb_url = this.$t("common.required");
+      if (!this.traefik_host) {
+        this.error.traefik_host = this.$t("common.required");
 
         if (isValidationOk) {
-          this.focusElement("mongodb_url");
+          this.focusElement("traefik_host");
+          isValidationOk = false;
+        }
+      }
+
+      if (!this.mongodb_host) {
+        this.error.mongodb_host = this.$t("common.required");
+
+        if (isValidationOk) {
+          this.focusElement("mongodb_host");
+          isValidationOk = false;
+        }
+      }
+
+      if (!this.mongodb_database) {
+        this.error.mongodb_database = this.$t("common.required");
+
+        if (isValidationOk) {
+          this.focusElement("mongodb_database");
           isValidationOk = false;
         }
       }
@@ -322,20 +365,23 @@ export default {
       this.core.$root.$once(
         `${taskAction}-completed-${eventId}`,
         this.configureModuleCompleted
-      );      const res = await to(
+      );
+
+      const res = await to(
         this.createModuleTaskForApp(this.instanceName, {
           action: taskAction,
           data: {
-            hostname: this.hostname,
-            lets_encrypt: this.lets_encrypt,
-            http2https: this.lets_encrypt,
-            mongodb_url: this.mongodb_url,
-            mail_server_uuid: this.mail_server_uuid,
-            webhooks_collection: this.webhooks_collection,
-            events_collection: this.events_collection,
-            settings_collection: this.settings_collection,
-            triggers_collection: this.triggers_collection,
-            logs_collection: this.logs_collection,
+            traefik_host: this.traefik_host,
+            request_https_certificate: this.request_https_certificate,
+            mongodb_host: this.mongodb_host,
+            mongodb_port: this.mongodb_port,
+            mongodb_database: this.mongodb_database,
+            mongodb_username: this.mongodb_username,
+            mongodb_password: this.mongodb_password,
+            enable_mail_integration: this.enable_mail_integration,
+            max_concurrent_webhooks: parseInt(this.max_concurrent_webhooks),
+            webhook_timeout: parseInt(this.webhook_timeout),
+            retry_attempts: parseInt(this.retry_attempts),
           },
           extra: {
             title: this.$t("settings.configure_instance", {
