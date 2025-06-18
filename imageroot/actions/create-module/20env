@@ -23,5 +23,8 @@ agent.set_env('TRAEFIK_LETS_ENCRYPT', 'False')
 # Mail server integration
 agent.set_env('MAIL_SERVER_UUID', '')
 
+# Backend image for the API service
+agent.set_env('BACKEND_IMAGE', 'localhost/mail-webhooks-backend:latest')
+
 # Phase 1: API-only mode (no mail monitor)
 agent.set_env('MAIL_MONITOR_ENABLED', 'False')

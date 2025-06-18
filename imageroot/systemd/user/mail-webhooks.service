@@ -31,7 +31,7 @@ ExecStart=/usr/bin/podman run \
     --env=SETTINGS_COLLECTION=${SETTINGS_COLLECTION:-settings} \
     --env=TRIGGERS_COLLECTION=${TRIGGERS_COLLECTION:-triggers} \
     --env=LOGS_COLLECTION=${LOGS_COLLECTION:-logs} \
-    ${BACKEND_IMAGE:-localhost/mail-webhooks-backend:latest}
+    ${BACKEND_IMAGE}
 ExecStop=/usr/bin/podman stop --ignore --cidfile %t/mail-webhooks.ctr-id -t 10
 ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/mail-webhooks.ctr-id
 PIDFile=%t/mail-webhooks.pid
