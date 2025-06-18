@@ -386,11 +386,10 @@ class MailMonitorService:
             # Stop monitors for servers no longer needed
             for server_uuid in list(self.active_monitors.keys()):
                 if server_uuid not in required_servers:
-                    self._stop_monitor_for_server(server_uuid)
-                    
+                    self._stop_monitor_for_server(server_uuid)                    
         except Exception as e:
             logger.error(f"Error updating monitors: {e}")
-    
+
     def _start_monitor_for_server(self, server_uuid: str):
         """Start monitoring for a specific mail server"""
         try:
@@ -410,18 +409,26 @@ class MailMonitorService:
             # Connect and authenticate (credentials would need to be configured)
             # For now, we'll log that monitoring would start
             logger.info(f"Would start monitoring mail server {server_uuid} at {mail_server['host']}")
-            
-            # Create monitor with webhook processor
+              # Create monitor with webhook processor
+            if not self.webhook_processor:
+                logger.error(f"Webhook processor not initialized")
+                return
             monitor = MailboxMonitor(imap_client, self.webhook_processor.process_message_webhooks)
             
-            # Start monitoring (mailboxes would be determined from webhook configs)
-            # monitor.start_monitoring(['INBOX'], interval=60)
+            # Determine which mailboxes to monitor from active webhooks
+            monitored_mailboxes = self._get_monitored_mailboxes_for_server(server_uuid)
+            if not monitored_mailboxes:
+                monitored_mailboxes = ['INBOX']  # Default to INBOX if no specific mailboxes configured
+            
+            # Start monitoring the determined mailboxes
+            monitor.start_monitoring(monitored_mailboxes, interval=60)
             
             self.active_monitors[server_uuid] = monitor
+            logger.info(f"Started monitoring mailboxes {monitored_mailboxes} on server {server_uuid}")
             
         except Exception as e:
             logger.error(f"Error starting monitor for server {server_uuid}: {e}")
-    
+
     def _stop_monitor_for_server(self, server_uuid: str):
         """Stop monitoring for a specific mail server"""
         try:
@@ -432,14 +439,14 @@ class MailMonitorService:
                 logger.info(f"Stopped monitoring mail server {server_uuid}")
         except Exception as e:
             logger.error(f"Error stopping monitor for server {server_uuid}: {e}")
-    
+
     def _process_interval_triggers(self):
         """Process webhooks with interval-based triggers"""
         try:
             if not self.mongodb_client:
                 return
             
-            db = self.mongodb_client['mail_webhooks']
+            db = self.mongodb_client[self.settings.get('database_name', 'mail_webhooks')]
             webhooks_collection = db[self.settings.get('webhooks_collection', 'webhooks')]
             
             # Get all active interval-based webhooks
@@ -480,13 +487,15 @@ class MailMonitorService:
             if not mail_server:
                 logger.error(f"Mail server {mail_server_uuid} not found for webhook {webhook_id}")
                 return
-            
-            # This would connect to IMAP and check for messages matching webhook criteria
+              # This would connect to IMAP and check for messages matching webhook criteria
             # For now, we'll log that the interval check would occur
             logger.info(f"Would perform interval check for webhook {webhook_id}")
             
             # Update last triggered time
-            db = self.mongodb_client['mail_webhooks']
+            if not self.mongodb_client:
+                logger.error("MongoDB client not available")
+                return
+            db = self.mongodb_client[self.settings.get('database_name', 'mail_webhooks')]
             webhooks_collection = db[self.settings.get('webhooks_collection', 'webhooks')]
             webhooks_collection.update_one(
                 {'_id': ObjectId(webhook_id)},
@@ -495,6 +504,41 @@ class MailMonitorService:
             
         except Exception as e:
             logger.error(f"Error processing interval webhook: {e}")
+    
+    def _get_monitored_mailboxes_for_server(self, server_uuid: str) -> List[str]:
+        """Get list of mailboxes that need monitoring for a specific server"""
+        try:
+            if not self.mongodb_client:
+                return []
+            
+            db = self.mongodb_client[self.settings.get('database_name', 'mail_webhooks')]
+            webhooks_collection = db[self.settings.get('webhooks_collection', 'webhooks')]
+            
+            # Get all active realtime webhooks for this server
+            active_webhooks = list(webhooks_collection.find({
+                'active': True,
+                'trigger_config.trigger_type': 'realtime'
+                # Note: In a more complete implementation, you'd filter by server_uuid
+            }))
+            
+            monitored_mailboxes = set()
+            
+            for webhook in active_webhooks:
+                trigger_config = webhook.get('trigger_config', {})
+                mailboxes = trigger_config.get('mailboxes', [])
+                
+                if not mailboxes:
+                    # Empty mailboxes means monitor all default mailboxes
+                    monitored_mailboxes.update(['INBOX'])
+                else:
+                    # Add specific mailboxes
+                    monitored_mailboxes.update(mailboxes)
+            
+            return list(monitored_mailboxes) if monitored_mailboxes else ['INBOX']
+            
+        except Exception as e:
+            logger.error(f"Error determining monitored mailboxes for server {server_uuid}: {e}")
+            return ['INBOX']  # Default fallback
 
 
 # Global service instance

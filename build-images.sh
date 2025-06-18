@@ -51,8 +51,7 @@ images+=("${repobase}/${reponame}")
 # Build backend API container image
 #
 reponame_backend="mail-webhooks-backend"
-container_backend=$(buildah from -f imageroot/api/Containerfile imageroot/api)
-buildah commit "${container_backend}" "${repobase}/${reponame_backend}"
+container_backend=$(buildah build -f imageroot/api/Containerfile -t "${repobase}/${reponame_backend}" imageroot/api)
 
 # Append the backend image URL to the images array
 images+=("${repobase}/${reponame_backend}")
