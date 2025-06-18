@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import agent
+
+try:
+    # Try to parse the stdin as JSON.
+    # If parsing fails, output everything to stderr
+    data = json.load(sys.stdin)
+
+    # Collection names with defaults
+    webhooks_collection = data.get("webhooks_collection", "webhooks")
+    events_collection = data.get("events_collection", "events")
+    settings_collection = data.get("settings_collection", "settings")
+    triggers_collection = data.get("triggers_collection", "triggers")
+    logs_collection = data.get("logs_collection", "logs")
+
+    # Setup configuration from user input.
+    agent.set_env("MONGODB_URL", data["mongodb_url"])
+    agent.set_env("WEBHOOKS_COLLECTION", webhooks_collection)
+    agent.set_env("EVENTS_COLLECTION", events_collection)
+    agent.set_env("SETTINGS_COLLECTION", settings_collection)
+    agent.set_env("TRIGGERS_COLLECTION", triggers_collection)
+    agent.set_env("LOGS_COLLECTION", logs_collection)
+
+    # Mail server integration (optional)
+    mail_server_uuid = data.get("mail_server_uuid", "")
+    agent.set_env("MAIL_SERVER_UUID", mail_server_uuid)
+
+    # Make sure everything is saved inside the environment file
+    # just before starting systemd unit
+    agent.dump_env()
+
+    print("Environment configuration completed successfully", file=sys.stderr)
+
+except Exception as e:
+    print(f"Error in environment setup: {e}", file=sys.stderr)
+    sys.exit(1)

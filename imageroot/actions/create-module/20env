@@ -26,10 +26,13 @@ try:
     agent.set_env('MAIL_SERVER_UUID', '')
 
     # Backend image for the API service
-    agent.set_env('BACKEND_IMAGE', 'localhost/mail-webhooks-backend:latest')
+    agent.set_env('BACKEND_IMAGE', 'ghcr.io/nethserver/mail-webhooks-backend:latest')
 
     # Phase 1: API-only mode (no mail monitor)
     agent.set_env('MAIL_MONITOR_ENABLED', 'False')
+
+    # Make sure everything is saved inside the environment file
+    agent.dump_env()
 
     print("Environment variables set successfully", file=sys.stderr)
 

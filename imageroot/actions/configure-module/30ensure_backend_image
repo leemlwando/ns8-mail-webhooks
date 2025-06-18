@@ -7,57 +7,40 @@
 
 import os
 import sys
-import subprocess
 import agent
 
-# Use a local image tag (not a registry URL) for the backend image
-backend_image = "localhost/mail-webhooks-backend:latest"
-
-print(f"Ensuring backend image is available: {backend_image}", file=sys.stderr)
-
-# Change to the API directory for building
-api_dir = "/imageroot/api"
-if not os.path.exists(api_dir):
-    print(f"Error: API directory not found: {api_dir}", file=sys.stderr)
-    sys.exit(1)
-
-os.chdir(api_dir)
-
-print("Building backend image from source...", file=sys.stderr)
-
-# Build the backend image using podman and the Containerfile
 try:
-    subprocess.run([
-        "podman", "build", 
-        "-t", backend_image,
-        "."
-    ], check=True, stderr=subprocess.STDOUT)
-    print(f"Successfully built backend image: {backend_image}", file=sys.stderr)
-except subprocess.CalledProcessError as e:
-    print(f"Error: Failed to build backend image: {e}", file=sys.stderr)
-    sys.exit(1)
-
-# Verify the image was created
-try:
-    subprocess.run([
-        "podman", "image", "exists", backend_image
-    ], check=True)
-    print(f"Backend image verified: {backend_image}", file=sys.stderr)
+    # Get the backend image name from environment
+    backend_image = os.environ.get('BACKEND_IMAGE', 'ghcr.io/nethserver/mail-webhooks-backend:latest')
     
-    # Get image ID for logging
-    result = subprocess.run([
-        "podman", "image", "inspect", backend_image,
-        "--format", "{{.Id}}"
-    ], capture_output=True, text=True, check=True)
+    # Build the backend image if it doesn't exist locally or is set to localhost
+    if backend_image.startswith('localhost/') or backend_image.startswith('ghcr.io/'):
+        print(f"Ensuring backend image is available: {backend_image}", file=sys.stderr)
+        
+        # Check if we need to build the image locally
+        if backend_image.startswith('localhost/'):
+            # Build the backend image from the API directory
+            api_dir = "/imageroot/api"
+            if os.path.exists(api_dir):
+                build_result = agent.run_helper(
+                    "podman", "build", "-t", backend_image, api_dir
+                )
+                build_result.check_returncode()
+                print(f"Backend image built successfully: {backend_image}", file=sys.stderr)
+            else:
+                print(f"Warning: API directory not found at {api_dir}", file=sys.stderr)
+        else:
+            # Try to pull the image from registry
+            try:
+                pull_result = agent.run_helper("podman", "pull", backend_image)
+                pull_result.check_returncode()
+                print(f"Backend image pulled successfully: {backend_image}", file=sys.stderr)
+            except Exception as pull_error:
+                print(f"Warning: Could not pull backend image {backend_image}: {pull_error}", file=sys.stderr)
     
-    image_id = result.stdout.strip()[:12]
-    print(f"{image_id} - Image created successfully", file=sys.stderr)
-    
-except subprocess.CalledProcessError:
-    print("Error: Backend image was not created properly", file=sys.stderr)
-    sys.exit(1)
+    print("Backend image setup completed", file=sys.stderr)
 
-# Set the backend image environment variable
-agent.set_env("BACKEND_IMAGE", backend_image)
-
-print("Backend image setup completed successfully", file=sys.stderr)
+except Exception as e:
+    print(f"Error ensuring backend image: {e}", file=sys.stderr)
+    # Don't fail the entire configuration if image setup fails
+    sys.exit(0)

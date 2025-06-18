@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import os
+import agent
+
+agent.set_weight(os.path.basename(__file__), 0) # Validation step, no task progress at all
+
+try:
+    # Try to parse the stdin as JSON.
+    # If parsing fails, output everything to stderr
+    data = json.load(sys.stdin)
+
+    # Validate required fields
+    if not data.get("mongodb_url"):
+        agent.set_status('validation-failed')
+        json.dump([{
+            'field': 'mongodb_url',
+            'parameter': 'mongodb_url', 
+            'value': data.get("mongodb_url", ""),
+            'error': 'mongodb_url_is_required'
+        }], fp=sys.stdout)
+        sys.exit(3)
+
+    # Validate MongoDB URL format (basic check)
+    mongodb_url = data["mongodb_url"]
+    if not (mongodb_url.startswith("mongodb://") or mongodb_url.startswith("mongodb+srv://")):
+        agent.set_status('validation-failed')
+        json.dump([{
+            'field': 'mongodb_url',
+            'parameter': 'mongodb_url',
+            'value': mongodb_url,
+            'error': 'mongodb_url_invalid_format'
+        }], fp=sys.stdout)
+        sys.exit(3)
+
+except Exception as e:
+    print(f"Error in MongoDB validation: {e}", file=sys.stderr)
+    sys.exit(1)

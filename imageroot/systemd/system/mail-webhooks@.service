@@ -26,13 +26,12 @@ ExecStart=/usr/bin/podman run \
     --replace --name=%i-mail-webhooks \
     --publish=127.0.0.1:${TCP_PORT}:8080 \
     --env=MONGODB_URL=${MONGODB_URL} \
-    --env=MAIL_SERVER_UUID=${MAIL_SERVER_UUID} \
-    --env=WEBHOOKS_COLLECTION=${WEBHOOKS_COLLECTION:-webhooks} \
+    --env=MAIL_SERVER_UUID=${MAIL_SERVER_UUID} \    --env=WEBHOOKS_COLLECTION=${WEBHOOKS_COLLECTION:-webhooks} \
     --env=EVENTS_COLLECTION=${EVENTS_COLLECTION:-events} \
     --env=SETTINGS_COLLECTION=${SETTINGS_COLLECTION:-settings} \
     --env=TRIGGERS_COLLECTION=${TRIGGERS_COLLECTION:-triggers} \
     --env=LOGS_COLLECTION=${LOGS_COLLECTION:-logs} \
-    localhost/mail-webhooks-backend:latest
+    ${BACKEND_IMAGE:-ghcr.io/nethserver/mail-webhooks-backend:latest}
 ExecStop=/usr/bin/podman stop --ignore --cidfile /run/%i-mail-webhooks.ctr-id -t 10
 ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile /run/%i-mail-webhooks.ctr-id
 PIDFile=/run/%i-mail-webhooks.pid

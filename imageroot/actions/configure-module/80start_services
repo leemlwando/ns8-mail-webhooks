@@ -1,101 +1,35 @@
-#!/usr/bin/env python3
+#!/bin/bash
 
 #
 # Copyright (C) 2025 Nethesis S.r.l.
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-import sys
-import subprocess
-import os
-import agent
+set -e
 
-print("Starting mail-webhooks service configuration...", file=sys.stderr)
+# Redirect any output to the journal (stderr)
+exec 1>&2
 
-# Create required files
-subprocess.run(["touch", "smarthost.env"], check=True)
+# If the control reaches this step, the service can be enabled and started
 
-# Print environment variables for debugging
-print("Environment variables in current context:", file=sys.stderr)
-for key, value in os.environ.items():
-    if any(prefix in key for prefix in ["MONGODB", "MAIL_", "WEBHOOKS", "EVENTS", "SETTINGS", "TRIGGERS", "LOGS"]):
-        print(f"{key}={value}", file=sys.stderr)
+echo "Starting mail-webhooks services..."
 
-print("Backend image should be ready (built by 30ensure_backend_image)...", file=sys.stderr)
-
-# Fallback: Ensure backend image exists if it wasn't built earlier due to permission issues
-backend_image = "localhost/mail-webhooks-backend:latest"
-try:
-    result = subprocess.run(["podman", "image", "exists", backend_image], check=False)
-    if result.returncode != 0:
-        print("Backend image not found, building it now...", file=sys.stderr)
-        api_dir = "/imageroot/api"
-        if os.path.exists(api_dir):
-            old_cwd = os.getcwd()
-            os.chdir(api_dir)
-            try:
-                subprocess.run(["podman", "build", "-t", backend_image, "."], check=True)
-                print(f"Successfully built backend image: {backend_image}", file=sys.stderr)
-            finally:
-                os.chdir(old_cwd)
-        else:
-            print(f"Warning: API directory not found at {api_dir}", file=sys.stderr)
-    else:
-        print(f"Backend image already exists: {backend_image}", file=sys.stderr)
-except subprocess.CalledProcessError as e:
-    print(f"Warning: Could not check/build backend image: {e}", file=sys.stderr)
-
-# Enable and start the main service
-print("Enabling and starting mail-webhooks.service...", file=sys.stderr)
-try:
-    # Check if running as root (rootfull module)
-    if os.geteuid() == 0:
-        # Rootfull module - use system service
-        module_id = os.environ.get('MODULE_ID', 'mail-webhooks')
-        service_name = f"mail-webhooks@{module_id}.service"
-        subprocess.run([
-            "systemctl", "enable", "--now", service_name
-        ], check=True)
-    else:
-        # Rootless module - use user service
-        subprocess.run([
-            "systemctl", "--user", "enable", "--now", "mail-webhooks.service"
-        ], check=True)
-except subprocess.CalledProcessError as e:
-    print(f"Error starting mail-webhooks.service: {e}", file=sys.stderr)
-    sys.exit(1)
-
-# Check service status
-print("Checking service status...", file=sys.stderr)
-try:
-    if os.geteuid() == 0:
-        # Rootfull module
-        module_id = os.environ.get('MODULE_ID', 'mail-webhooks')
-        service_name = f"mail-webhooks@{module_id}.service"
-        subprocess.run([
-            "systemctl", "status", service_name, "--no-pager"
-        ], check=False, stderr=subprocess.STDOUT)
-    else:
-        # Rootless module
-        subprocess.run([
-            "systemctl", "--user", "status", "mail-webhooks.service", "--no-pager"
-        ], check=False, stderr=subprocess.STDOUT)
-except subprocess.CalledProcessError:
-    # Status command might return non-zero even for running services
-    pass
+# Check if running as root (rootfull module)
+if [[ $EUID == 0 ]]; then
+    echo "Rootfull module detected - using system services"
+    # Rootfull module - use system service with module ID
+    MODULE_ID=${MODULE_ID:-mail-webhooks}
+    SERVICE_NAME="mail-webhooks@${MODULE_ID}.service"
+    systemctl enable --now "${SERVICE_NAME}"
+    echo "Started system service: ${SERVICE_NAME}"
+else
+    echo "Rootless module detected - using user services"
+    # Rootless module - use user service
+    systemctl --user enable --now mail-webhooks.service
+    echo "Started user service: mail-webhooks.service"
+fi
 
 # Mail monitor service disabled for Phase 1 (API-only implementation)
-mongodb_url = os.environ.get("MONGODB_URL", "")
-if False:  # mongodb_url:  # Disabled for Phase 1
-    print("Starting mail monitor service...", file=sys.stderr)
-    try:
-        subprocess.run([
-            "systemctl", "--user", "enable", "--now", "mail-monitor.service"
-        ], check=False)
-        print("Mail monitor service started", file=sys.stderr)
-    except subprocess.CalledProcessError:
-        print("Warning: Failed to start mail monitor service", file=sys.stderr)
-else:
-    print("Mail monitor service disabled - Phase 1 implementation (API only)", file=sys.stderr)
+echo "Mail monitor service disabled - Phase 1 implementation (API only)"
 
-print("Service startup completed", file=sys.stderr)
+echo "Service startup completed successfully"

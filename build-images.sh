@@ -11,9 +11,9 @@ set -e
 # Prepare variables for later use
 images=()
 # The image will be pushed to GitHub container registry
-repobase="${REPOBASE:-ghcr.io/leemlwando}"
+repobase="${REPOBASE:-ghcr.io/nethserver}"
 # Configure the image name
-reponame="ns8-mail-webhooks"
+reponame="mail-webhooks"
 
 # Create a new empty container image
 container=$(buildah from scratch)
@@ -25,27 +25,25 @@ if ! buildah containers --format "{{.ContainerName}}" | grep -q nodebuilder-mail
 fi
 
 echo "Build static UI files with node..."
-buildah run \
-    --workingdir=/usr/src/ui \
-    --env="NODE_OPTIONS=--openssl-legacy-provider" \
-    nodebuilder-mailwebhooks \
-    sh -c "yarn install && yarn build"
+buildah run --env="NODE_OPTIONS=--openssl-legacy-provider" nodebuilder-mailwebhooks sh -c "cd /usr/src/ui && yarn install && yarn build"
 
 # Set execute permissions on action scripts before adding to container
 echo "Setting execute permissions on action scripts..."
 find imageroot/actions -type f -name "*[0-9][0-9]*" -exec chmod +x {} \;
 find imageroot/bin -type f -exec chmod +x {} \; 2>/dev/null || true
+find imageroot/events -type f -name "*[0-9][0-9]*" -exec chmod +x {} \; 2>/dev/null || true
+find imageroot/update-module.d -type f -exec chmod +x {} \; 2>/dev/null || true
 
 # Add imageroot directory to the container image
 buildah add "${container}" imageroot /imageroot
 buildah add "${container}" ui/dist /ui
 
-# Setup the entrypoint, ask to reserve one TCP port with the label and set a rootless container
+# Setup the entrypoint, ask to reserve one TCP port with the label and set a rootfull container
 buildah config --entrypoint=/ \
-    --label="org.nethserver.authorizations=traefik@node:routeadm" \
+    --label="org.nethserver.authorizations=traefik@node:routeadm cluster:accountconsumer" \
     --label="org.nethserver.tcp-ports-demand=1" \
-    --label="org.nethserver.rootfull=1" \
-    --label="org.nethserver.images=" \
+    --label="org.nethserver.rootfull=0" \
+    --label="org.nethserver.images=docker.io/mongo:7.0 ghcr.io/nethserver/mail-webhooks-backend:latest" \
     "${container}"
 
 # Commit the image
@@ -55,12 +53,21 @@ buildah commit "${container}" "${repobase}/${reponame}"
 images+=("${repobase}/${reponame}")
 
 #
+# NOTICE:
+#
+# It is possible to build and publish multiple images.
+#
+# 1. create another buildah container
+# 2. add things to it and commit it
+# 3. append the image url to the images array
+#
+
+#
 # Setup CI when pushing to Github. 
 # Warning! docker::// protocol expects lowercase letters (,,)
 if [[ -n "${CI}" ]]; then
     # Set output value for Github Actions
     printf "images=%s\n" "${images[*],,}" >> "${GITHUB_OUTPUT}"
-    printf " - %s:${IMAGETAG:-latest}\n" "${images[@],,}" >> $GITHUB_STEP_SUMMARY
 else
     # Just print info for manual push
     printf "Publish the images with:\n\n"

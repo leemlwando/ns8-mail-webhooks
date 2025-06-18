@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 #
-# Copyright (C) 2023 Nethesis S.r.l.
+# Copyright (C) 2025 Nethesis S.r.l.
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
@@ -13,23 +13,31 @@ import json
 import agent
 import agent.tasks
 
-# Try to parse the stdin as JSON.
-# If parsing fails, output everything to stderr
-data = json.load(sys.stdin)
+try:
+    # Try to parse the stdin as JSON.
+    # If parsing fails, output everything to stderr
+    data = json.load(sys.stdin)
 
-# Find default traefik instance for current node
-default_traefik_id = agent.resolve_agent_id('traefik@node')
-if default_traefik_id is None:
-    sys.exit(2)
+    # Find default traefik instance for current node
+    default_traefik_id = agent.resolve_agent_id('traefik@node')
+    if default_traefik_id is None:
+        print("Warning: Cannot find default traefik instance", file=sys.stderr)
+        sys.exit(0)  # Don't fail destroy if traefik is not available
 
-# Remove traefik route
-response = agent.tasks.run(
-    agent_id=default_traefik_id,
-    action='delete-route',
-    data={
-        'instance': os.environ['MODULE_ID']
-    },
-)
+    # Remove traefik route
+    response = agent.tasks.run(
+        agent_id=default_traefik_id,
+        action='delete-route',
+        data={
+            'instance': os.environ['MODULE_ID']
+        },
+    )
 
-# Check if traefik configuration has been successfull
-agent.assert_exp(response['exit_code'] == 0)
+    # Check if traefik configuration was successful
+    agent.assert_exp(response['exit_code'] == 0)
+    print("Traefik route removed successfully", file=sys.stderr)
+
+except Exception as e:
+    print(f"Warning: Error removing traefik route: {e}", file=sys.stderr)
+    # Don't fail destroy if traefik cleanup fails
+    sys.exit(0)

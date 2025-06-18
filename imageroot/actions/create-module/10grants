@@ -10,7 +10,8 @@ import agent
 
 try:
     # Allow other modules to read module configuration and status
-    agent.run_helper("redis-exec", "SADD", f"{agent.get_agent_id()}/roles/reader", "get-*", "list-*").check_returncode()
+    agent.run_helper("redis-exec", "SADD", f"{agent.get_agent_id()}/roles/reader", 
+        "get-*", "list-*").check_returncode()
 
     # Allow the instance itself to run some subtasks during operations
     agent.run_helper("redis-exec", "SADD", f"{agent.get_agent_id()}/roles/selfadm",
