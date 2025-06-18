@@ -38,3 +38,4 @@ config["available_mail_servers"] = mail_servers
 
 # Output configuration as JSON
 json.dump(config, fp=sys.stdout, indent=2)
+sys.exit(0)  # Explicit success exit

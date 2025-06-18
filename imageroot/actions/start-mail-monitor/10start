@@ -1,27 +1,53 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
 #
 # Copyright (C) 2025 Nethesis S.r.l.
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-# Start mail monitor service
+import os
+import sys
+import json
 
-set -e
+try:
+    import agent
+except ImportError as e:
+    print(f"Error importing agent module: {e}", file=sys.stderr)
+    sys.exit(1)
 
-# Read current settings
-source <(jq -r 'to_entries[] | "export " + (.key|ascii_upcase) + "=" + (.value|tostring|@sh)' < <(cat))
+try:
+    # Read input data
+    data = json.load(sys.stdin) if not sys.stdin.isatty() else {}
+    
+    # Check if mail monitoring is enabled
+    mail_monitor_enabled = os.getenv("MAIL_MONITOR_ENABLED", "False") == "True"
+    
+    if not mail_monitor_enabled:
+        print("Mail monitor is disabled for Phase 1 (API-only mode)", file=sys.stderr)
+        json.dump({"status": "disabled", "message": "Mail monitor is disabled in Phase 1"}, fp=sys.stdout)
+        sys.exit(0)
+    
+    # Check if MongoDB is configured
+    mongodb_url = os.getenv("MONGODB_URL", "")
+    if not mongodb_url:
+        print("MongoDB URL not configured", file=sys.stderr)
+        sys.exit(1)
+    
+    # Start mail monitor service using agent
+    if os.geteuid() == 0:
+        # Rootfull mode
+        service_name = f"mail-monitor@{agent.get_agent_uid()}.service"
+        agent.run_helper("systemctl", "start", service_name).check_returncode()
+        agent.run_helper("systemctl", "enable", service_name).check_returncode()
+    else:
+        # Rootless mode
+        agent.run_helper("systemctl", "--user", "start", "mail-monitor.service").check_returncode()
+        agent.run_helper("systemctl", "--user", "enable", "mail-monitor.service").check_returncode()
+    
+    print("Mail monitor service started successfully", file=sys.stderr)
+    json.dump({"status": "started", "message": "Mail monitor service started successfully"}, fp=sys.stdout)
+    sys.exit(0)
 
-# Check if mail monitoring is enabled and configured
-if [[ -z "${MONGODB_URL}" ]]; then
-    echo "MongoDB URL not configured" >&2
-    exit 1
-fi
-
-# Start the mail monitor service
-systemctl --user start mail-monitor.service
-
-# Enable auto-start
-systemctl --user enable mail-monitor.service
-
-echo "Mail monitor service started successfully"
+except Exception as e:
+    print(f"Error starting mail monitor: {e}", file=sys.stderr)
+    sys.exit(1)

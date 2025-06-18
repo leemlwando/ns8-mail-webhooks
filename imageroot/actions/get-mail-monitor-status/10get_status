@@ -1,34 +1,88 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
 #
 # Copyright (C) 2025 Nethesis S.r.l.
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-# Get mail monitor status
+import os
+import sys
+import json
+import subprocess
 
-set -e
+try:
+    import agent
+except ImportError as e:
+    print(f"Error importing agent module: {e}", file=sys.stderr)
+    sys.exit(1)
 
-# Check if service is running
-if systemctl --user is-active --quiet mail-monitor.service; then
-    STATUS="running"
-    ENABLED=$(systemctl --user is-enabled mail-monitor.service 2>/dev/null || echo "disabled")
-else
-    STATUS="stopped"
-    ENABLED="disabled"
-fi
+try:
+    # Check if mail monitoring is enabled
+    mail_monitor_enabled = os.getenv("MAIL_MONITOR_ENABLED", "False") == "True"
+    
+    if not mail_monitor_enabled:
+        result = {
+            "status": "disabled",
+            "enabled": False,
+            "message": "Mail monitor is disabled in Phase 1 (API-only mode)",
+            "service_name": "mail-monitor.service"
+        }
+        json.dump(result, fp=sys.stdout, indent=2)
+        sys.exit(0)
+    
+    # Determine service name based on execution context
+    if os.geteuid() == 0:
+        # Rootfull mode
+        service_name = f"mail-monitor@{agent.get_agent_uid()}.service"
+        systemctl_cmd = ["systemctl"]
+    else:
+        # Rootless mode
+        service_name = "mail-monitor.service"
+        systemctl_cmd = ["systemctl", "--user"]
+    
+    # Check service status
+    try:
+        result = agent.run_helper(*systemctl_cmd, "is-active", service_name)
+        status = "running" if result.returncode == 0 else "stopped"
+    except:
+        status = "stopped"
+    
+    # Check if service is enabled
+    try:
+        result = agent.run_helper(*systemctl_cmd, "is-enabled", service_name)
+        enabled = result.returncode == 0
+    except:
+        enabled = False
+    
+    # Get recent logs (last 10 entries)
+    logs = []
+    try:
+        if os.geteuid() == 0:
+            log_result = agent.run_helper("journalctl", "-u", service_name, "--no-pager", "-n", "10", "--output=json")
+        else:
+            log_result = agent.run_helper("journalctl", "--user", "-u", service_name, "--no-pager", "-n", "10", "--output=json")
+        
+        if log_result.returncode == 0:
+            log_lines = log_result.stdout.strip().split('\n')
+            for line in log_lines:
+                if line.strip():
+                    try:
+                        logs.append(json.loads(line))
+                    except:
+                        pass
+    except:
+        pass
+    
+    result = {
+        "status": status,
+        "enabled": enabled,
+        "logs": logs,
+        "service_name": service_name
+    }
+    
+    json.dump(result, fp=sys.stdout, indent=2)
+    sys.exit(0)
 
-# Get last few log entries
-LOGS=$(journalctl --user -u mail-monitor.service --no-pager -n 10 --output=json-pretty 2>/dev/null || echo "[]")
-
-# Output status in JSON format
-jq -n \
-    --arg status "$STATUS" \
-    --arg enabled "$ENABLED" \
-    --argjson logs "$LOGS" \
-    '{
-        "status": $status,
-        "enabled": $enabled,
-        "logs": $logs,
-        "service_name": "mail-monitor.service"
-    }'
+except Exception as e:
+    print(f"Error getting mail monitor status: {e}", file=sys.stderr)
+    sys.exit(1)

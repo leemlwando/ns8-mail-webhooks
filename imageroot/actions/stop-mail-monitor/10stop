@@ -1,18 +1,39 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
 #
 # Copyright (C) 2025 Nethesis S.r.l.
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-# Stop mail monitor service
+import os
+import sys
+import json
 
-set -e
+try:
+    import agent
+except ImportError as e:
+    print(f"Error importing agent module: {e}", file=sys.stderr)
+    sys.exit(1)
 
-# Stop the mail monitor service
-systemctl --user stop mail-monitor.service || true
+try:
+    # Read input data
+    data = json.load(sys.stdin) if not sys.stdin.isatty() else {}
+    
+    # Stop mail monitor service using agent
+    if os.geteuid() == 0:
+        # Rootfull mode
+        service_name = f"mail-monitor@{agent.get_agent_uid()}.service"
+        agent.run_helper("systemctl", "stop", service_name)
+        agent.run_helper("systemctl", "disable", service_name)
+    else:
+        # Rootless mode
+        agent.run_helper("systemctl", "--user", "stop", "mail-monitor.service")
+        agent.run_helper("systemctl", "--user", "disable", "mail-monitor.service")
+    
+    print("Mail monitor service stopped successfully", file=sys.stderr)
+    json.dump({"status": "stopped", "message": "Mail monitor service stopped successfully"}, fp=sys.stdout)
+    sys.exit(0)
 
-# Disable auto-start
-systemctl --user disable mail-monitor.service || true
-
-echo "Mail monitor service stopped successfully"
+except Exception as e:
+    print(f"Error stopping mail monitor: {e}", file=sys.stderr)
+    sys.exit(1)
