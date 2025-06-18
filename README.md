@@ -136,6 +136,56 @@ To uninstall the instance:
 
 This module is currently in development. Phase 1 (Backend Foundation) is complete with a FastAPI-based REST API for webhook management, including support for custom MongoDB collection names.
 
+## Deployment & Troubleshooting
+
+### Server-Side Issues
+
+If you encounter permission errors or image-related issues after deployment, use the provided troubleshooting tools:
+
+1. **Quick Fix (Recommended)**:
+   ```bash
+   # Copy the fix script to your server
+   scp fix-server-permissions.sh root@your-server:/tmp/
+   
+   # SSH to server and run as the module user
+   ssh root@your-server
+   su - mail-webhooks1  # Replace with your module instance name
+   cd ~/.config/containers/systemd
+   cp /tmp/fix-server-permissions.sh .
+   chmod +x fix-server-permissions.sh
+   ./fix-server-permissions.sh
+   ```
+
+2. **Verification**:
+   ```bash
+   # Copy and run the verification script
+   scp verify-module.sh root@your-server:/tmp/
+   su - mail-webhooks1
+   cd ~/.config/containers/systemd
+   cp /tmp/verify-module.sh .
+   chmod +x verify-module.sh
+   ./verify-module.sh
+   ```
+
+3. **Manual Troubleshooting**:
+   See `SERVER_TROUBLESHOOTING.md` for detailed manual fix procedures.
+
+### Common Issues
+
+- **Permission denied errors**: Action scripts need execute permissions
+- **Image not found errors**: Backend image must be built locally, not pulled from registry
+- **Service startup failures**: Environment variables and image configuration must match
+- **Line ending issues**: Scripts must use Unix (LF) line endings, not Windows (CRLF)
+
+### Service Status
+
+Check service status and logs:
+```bash
+systemctl --user status mail-webhooks.service
+journalctl --user -u mail-webhooks.service -f
+curl -s http://127.0.0.1:20080/api/health
+```
+
 ## Testing
 
 Test the module using the `test-module.sh` script:
