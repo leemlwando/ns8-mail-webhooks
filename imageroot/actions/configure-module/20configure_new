@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import os
+import agent
+import agent.tasks
+
+# Parse the configuration request
+data = json.load(sys.stdin)
+
+# Setup default values
+hostname = data.get("hostname", "")
+http2https = data.get("http2https", True)
+lets_encrypt = data.get("lets_encrypt", False)
+mongodb_url = data["mongodb_url"]
+
+# Collection names with defaults
+webhooks_collection = data.get("webhooks_collection", "webhooks")
+events_collection = data.get("events_collection", "events")
+settings_collection = data.get("settings_collection", "settings")
+triggers_collection = data.get("triggers_collection", "triggers")
+logs_collection = data.get("logs_collection", "logs")
+
+# Mail server integration (optional)
+mail_server_uuid = data.get("mail_server_uuid", "")
+
+# Set environment variables
+agent.set_env("MONGODB_URL", mongodb_url)
+agent.set_env("WEBHOOKS_COLLECTION", webhooks_collection)
+agent.set_env("EVENTS_COLLECTION", events_collection)
+agent.set_env("SETTINGS_COLLECTION", settings_collection)
+agent.set_env("TRIGGERS_COLLECTION", triggers_collection)
+agent.set_env("LOGS_COLLECTION", logs_collection)
+agent.set_env("MAIL_SERVER_UUID", mail_server_uuid)
+
+# Configure Traefik routing if hostname is provided
+if hostname:
+    agent.set_env("TRAEFIK_HOST", hostname)
+    agent.set_env("TRAEFIK_HTTP2HTTPS", str(http2https))
+    agent.set_env("TRAEFIK_LETS_ENCRYPT", str(lets_encrypt))
+    
+    # Configure Traefik virtual host
+    response = agent.tasks.run(
+        agent_id=agent.resolve_agent_id('traefik@node'),
+        action='set-route',
+        data={
+            'instance': os.environ['MODULE_ID'],
+            'url': f'http://127.0.0.1:{os.environ["TCP_PORT"]}',
+            'host': hostname,
+            'http2https': http2https,
+            'lets_encrypt': lets_encrypt
+        }
+    )
+    
+    # Check if traefik configuration was successful
+    agent.assert_exp(response['exit_code'] == 0)
+
+# Save environment variables
+agent.dump_env()
