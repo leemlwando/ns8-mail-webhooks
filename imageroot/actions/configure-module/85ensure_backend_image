@@ -8,13 +8,33 @@
 set -e
 exec 1>&2
 
-# Ensure the backend image is available (this should be handled automatically by the agent)
-# but we can add this as a safety check
-
+# Ensure the backend image is available
 if [[ -n "${MAIL_WEBHOOKS_BACKEND_IMAGE}" ]]; then
     echo "Backend image environment variable set: ${MAIL_WEBHOOKS_BACKEND_IMAGE}"
-    # Optionally pull the image to ensure it's available
-    podman pull "${MAIL_WEBHOOKS_BACKEND_IMAGE}" || echo "Warning: Could not pull backend image, will try to use local/cached version"
+    
+    # First try to use local image, then try to pull from registry
+    if podman image exists "${MAIL_WEBHOOKS_BACKEND_IMAGE}"; then
+        echo "Backend image already exists locally"
+    else
+        echo "Attempting to pull backend image from registry..."
+        if podman pull "${MAIL_WEBHOOKS_BACKEND_IMAGE}"; then
+            echo "Successfully pulled backend image from registry"
+        else
+            echo "Warning: Could not pull backend image from registry"
+            echo "Checking for locally built images..."
+            
+            # Try to find a locally built image with similar name
+            LOCAL_IMAGE=$(podman images --format "{{.Repository}}:{{.Tag}}" | grep -E "(mail-webhooks-backend|ns8-mail-webhooks)" | head -1 || echo "")
+            if [[ -n "${LOCAL_IMAGE}" ]]; then
+                echo "Found local image: ${LOCAL_IMAGE}"
+                echo "Tagging local image as ${MAIL_WEBHOOKS_BACKEND_IMAGE}"
+                podman tag "${LOCAL_IMAGE}" "${MAIL_WEBHOOKS_BACKEND_IMAGE}"
+            else
+                echo "Error: No suitable backend image found locally or in registry"
+                exit 1
+            fi
+        fi
+    fi
 else
     echo "Error: MAIL_WEBHOOKS_BACKEND_IMAGE environment variable not set"
     exit 1

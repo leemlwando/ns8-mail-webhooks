@@ -43,6 +43,9 @@ agent.set_env("LOGS_COLLECTION", request.get("logs_collection", "logs"))
 # Set backend URL for webhook actions
 agent.set_env("BACKEND_URL", f"http://127.0.0.1:{os.environ['TCP_PORT']}")
 
+# Set backend image for systemd service
+agent.set_env("MAIL_WEBHOOKS_BACKEND_IMAGE", "ghcr.io/leemlwando/mail-webhooks-backend:latest")
+
 print(f"Environment variables set successfully", file=sys.stderr)
 
 # Configure Traefik to route "/mail-webhooks" path requests to the service
