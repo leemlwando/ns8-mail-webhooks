@@ -1,16 +1,17 @@
 {
-  "id": "mail-webhooks",
-  "name": "Mail Webhooks",
-  "description": "Manage mail webhooks for NS8 with advanced IMAP integration and webhook triggers for incoming mail events",
-  "categories": ["mail"],
+  "name": "mail-webhooks",
+  "description": {
+    "en": "Mail webhook management system for NetherServer 8"
+  },
+  "categories": ["mail", "integration"],
   "authors": [
     {
       "name": "Nethesis S.r.l.",
-      "email": "support@nethesis.it"
+      "email": "info@nethesis.it"
     }
   ],
   "docs": {
-    "documentation_url": "https://docs.nethserver.org/",
+    "documentation_url": "https://docs.nethserver.org/mail-webhooks/",
     "bug_url": "https://github.com/NethServer/ns8-mail-webhooks/issues",
     "code_url": "https://github.com/NethServer/ns8-mail-webhooks"
   },

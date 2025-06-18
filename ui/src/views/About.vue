@@ -1,5 +1,5 @@
 <!--
-  Copyright (C) 2025 Nethesis S.r.l.
+  Copyright (C) 2023 Nethesis S.r.l.
   SPDX-License-Identifier: GPL-3.0-or-later
 -->
 <template>
@@ -169,7 +169,7 @@ import {
 } from "@nethserver/ns8-ui-lib";
 
 export default {
-  name: "About",
+  name: "MailWebhooksAbout",
   components: {},
   mixins: [TaskService, QueryParamService, UtilService, PageTitleService],
   pageTitle() {
@@ -182,7 +182,7 @@ export default {
       },
       urlCheckInterval: null,
       app: null,
-      version: "-",
+      version: "",
       error: {
         moduleInfo: "",
         version: "",

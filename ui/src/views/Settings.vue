@@ -21,7 +21,8 @@
     </cv-row>
     <cv-row>
       <cv-column>
-        <cv-tile light>          <cv-form @submit.prevent="configureModule">
+        <cv-tile light>
+          <cv-form @submit.prevent="configureModule">
             <cv-text-input
               :label="$t('settings.hostname')"
               v-model="hostname"
@@ -60,56 +61,6 @@
               ref="mail_server_uuid"
             ></cv-text-input>
 
-            <!-- advanced options -->
-            <cv-accordion ref="accordion" class="maxwidth mg-bottom">
-              <cv-accordion-item :open="toggleAccordion[0]">
-                <template slot="title">{{ $t("settings.advanced") }}</template>
-                <template slot="content">
-                  <h5 class="mg-bottom">{{ $t('settings.collection_names') }}</h5>
-                  
-                  <cv-text-input
-                    :label="$t('settings.webhooks_collection')"
-                    v-model="webhooks_collection"
-                    :disabled="loading.getConfiguration || loading.configureModule"
-                    :invalid-message="error.webhooks_collection"
-                    ref="webhooks_collection"
-                  ></cv-text-input>
-
-                  <cv-text-input
-                    :label="$t('settings.events_collection')"
-                    v-model="events_collection"
-                    :disabled="loading.getConfiguration || loading.configureModule"
-                    :invalid-message="error.events_collection"
-                    ref="events_collection"
-                  ></cv-text-input>
-
-                  <cv-text-input
-                    :label="$t('settings.settings_collection')"
-                    v-model="settings_collection"
-                    :disabled="loading.getConfiguration || loading.configureModule"
-                    :invalid-message="error.settings_collection"
-                    ref="settings_collection"
-                  ></cv-text-input>
-
-                  <cv-text-input
-                    :label="$t('settings.triggers_collection')"
-                    v-model="triggers_collection"
-                    :disabled="loading.getConfiguration || loading.configureModule"
-                    :invalid-message="error.triggers_collection"
-                    ref="triggers_collection"
-                  ></cv-text-input>
-
-                  <cv-text-input
-                    :label="$t('settings.logs_collection')"
-                    v-model="logs_collection"
-                    :disabled="loading.getConfiguration || loading.configureModule"
-                    :invalid-message="error.logs_collection"
-                    ref="logs_collection"
-                  ></cv-text-input>
-                </template>
-              </cv-accordion-item>
-            </cv-accordion>
-
             <cv-row v-if="error.configureModule">
               <cv-column>
                 <NsInlineNotification
@@ -133,6 +84,13 @@
     </cv-row>
   </cv-grid>
 </template>
+            >
+          </cv-form>
+        </cv-tile>
+      </cv-column>
+    </cv-row>
+  </cv-grid>
+</template>
 
 <script>
 import to from "await-to-js";
@@ -146,7 +104,7 @@ import {
 } from "@nethserver/ns8-ui-lib";
 
 export default {
-  name: "Settings",
+  name: "MailWebhooksSettings",
   mixins: [
     TaskService,
     IconService,
@@ -156,7 +114,8 @@ export default {
   ],
   pageTitle() {
     return this.$t("settings.title") + " - " + this.appName;
-  },  data() {
+  },
+  data() {
     return {
       q: {
         page: "settings",
@@ -166,12 +125,6 @@ export default {
       lets_encrypt: false,
       mongodb_url: "",
       mail_server_uuid: "",
-      webhooks_collection: "webhooks",
-      events_collection: "events",
-      settings_collection: "settings",
-      triggers_collection: "triggers",
-      logs_collection: "logs",
-      toggleAccordion: [false],
       loading: {
         getConfiguration: false,
         configureModule: false,
@@ -182,11 +135,6 @@ export default {
         hostname: "",
         mongodb_url: "",
         mail_server_uuid: "",
-        webhooks_collection: "",
-        events_collection: "",
-        settings_collection: "",
-        triggers_collection: "",
-        logs_collection: "",
       },
     };
   },
@@ -256,20 +204,15 @@ export default {
       this.lets_encrypt = config.lets_encrypt || false;
       this.mongodb_url = config.mongodb_url || "";
       this.mail_server_uuid = config.mail_server_uuid || "";
-      this.webhooks_collection = config.webhooks_collection || "webhooks";
-      this.events_collection = config.events_collection || "events";
-      this.settings_collection = config.settings_collection || "settings";
-      this.triggers_collection = config.triggers_collection || "triggers";
-      this.logs_collection = config.logs_collection || "logs";
 
       this.focusElement("hostname");
-    },    validateConfigureModule() {
+    },
+    validateConfigureModule() {
       this.clearErrors(this);
       let isValidationOk = true;
 
       if (!this.mongodb_url) {
         this.error.mongodb_url = this.$t("common.required");
-
         if (isValidationOk) {
           this.focusElement("mongodb_url");
           isValidationOk = false;
@@ -331,11 +274,6 @@ export default {
             http2https: this.lets_encrypt,
             mongodb_url: this.mongodb_url,
             mail_server_uuid: this.mail_server_uuid,
-            webhooks_collection: this.webhooks_collection,
-            events_collection: this.events_collection,
-            settings_collection: this.settings_collection,
-            triggers_collection: this.triggers_collection,
-            logs_collection: this.logs_collection,
           },
           extra: {
             title: this.$t("settings.configure_instance", {
@@ -375,9 +313,5 @@ export default {
 
 .mg-bottom {
   margin-bottom: $spacing-06;
-}
-
-.maxwidth {
-  max-width: 38rem;
 }
 </style>
