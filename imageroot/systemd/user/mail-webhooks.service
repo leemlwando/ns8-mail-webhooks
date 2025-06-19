@@ -5,11 +5,17 @@
 
 [Unit]
 Description=Mail Webhooks API server (mail-webhooks, %i)
+After=network.target
 
 [Service]
 Environment=PODMAN_SYSTEMD_UNIT=%n
 EnvironmentFile=%S/state/environment
 EnvironmentFile=-%S/state/secrets/passwords.env
+# Stop any existing container first
+ExecStartPre=-/usr/bin/podman stop %N
+ExecStartPre=-/usr/bin/podman rm %N
+# Create volume if needed
+ExecStartPre=-/usr/bin/podman volume create mail-webhooks-data
 ExecStart=/usr/bin/podman run \
     --detach \
     --conmon-pidfile=%t/%n.pid \
@@ -18,14 +24,17 @@ ExecStart=/usr/bin/podman run \
     --replace --name=%N \
     --publish=127.0.0.1:${TCP_PORT}:8080 \
     --env-file=%S/state/environment \
-    --env-file=-%S/state/secrets/passwords.env \    --volume=mail-webhooks-data:/app/data:Z \
+    --env-file=-%S/state/secrets/passwords.env \
+    --volume=mail-webhooks-data:/app/data:Z \
     ${MAIL_WEBHOOKS_IMAGE:-ghcr.io/nethserver/mail-webhooks-api:latest}
-ExecStop=/usr/bin/podman stop --ignore --cidfile=%t/%n.cid
-ExecStopPost=/usr/bin/podman rm --ignore --force --cidfile=%t/%n.cid
+ExecStop=/usr/bin/podman stop --ignore --time=10 %N
+ExecStopPost=/usr/bin/podman rm --ignore --force %N
 PIDFile=%t/%n.pid
 Type=forking
 Restart=always
 RestartSec=30
+TimeoutStartSec=120
+TimeoutStopSec=60
 
 [Install]
 WantedBy=default.target

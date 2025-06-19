@@ -38,10 +38,11 @@ echo "SETTINGS_COLLECTION: ${SETTINGS_COLLECTION:-settings}"
 echo "TRIGGERS_COLLECTION: ${TRIGGERS_COLLECTION:-triggers}"
 echo "LOGS_COLLECTION: ${LOGS_COLLECTION:-logs}"
 
-# Validate required environment variables
+# Check environment variables but don't fail if MongoDB URL is missing
+# (it might be provided via environment files by systemd)
 if [ -z "$MONGODB_URL" ]; then
-    echo "ERROR: MONGODB_URL environment variable is not set!"
-    exit 1
+    echo "NOTE: MONGODB_URL environment variable is not set in startup environment"
+    echo "Will check for it during MongoDB connection test..."
 fi
 
 echo ""
@@ -57,16 +58,34 @@ echo "=== Testing MongoDB Connection ==="
 python3 -c "
 from pymongo import MongoClient
 import os
-client = MongoClient(os.environ['MONGODB_URL'], serverSelectionTimeoutMS=5000)
+import sys
+
 try:
-    client.server_info()
-    print('MongoDB connection successful')
+    mongodb_url = os.environ.get('MONGODB_URL')
+    if not mongodb_url:
+        print('WARNING: MONGODB_URL environment variable is not set!')
+        print('Will attempt to start without MongoDB connection')
+    else:
+        print(f'Testing connection to: {mongodb_url[:30]}...')
+        client = MongoClient(mongodb_url, serverSelectionTimeoutMS=5000)
+        client.server_info()
+        print('MongoDB connection successful')
+        client.close()
 except Exception as e:
     print(f'MongoDB connection failed: {e}')
-    exit(1)
+    print('WARNING: Starting without MongoDB connection')
+    # Don't exit - let the app start and handle the connection issue
 "
 
 echo ""
 echo "=== Starting FastAPI Application ==="
 echo "Starting uvicorn server on 0.0.0.0:8080..."
-exec python3 -m uvicorn app:app --host 0.0.0.0 --port 8080 --log-level info
+
+# Try main.py first, then app.py as fallback
+if [ -f "main.py" ]; then
+    echo "Using main.py as entry point"
+    exec python3 main.py
+else
+    echo "Using app.py as entry point"
+    exec python3 -m uvicorn app:app --host 0.0.0.0 --port 8080 --log-level info
+fi

@@ -1,0 +1,62 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+echo "=== Mail Webhooks Service Diagnostic ==="
+echo "Timestamp: $(date)"
+echo ""
+
+echo "=== Environment Check ==="
+echo "MODULE_ID: ${MODULE_ID}"
+echo "TCP_PORT: ${TCP_PORT}"
+echo "MONGODB_URL: ${MONGODB_URL:0:30}..."
+echo "MAIL_SERVER_UUID: ${MAIL_SERVER_UUID}"
+echo ""
+
+echo "=== Systemd Service Status ==="
+systemctl --user status mail-webhooks.service --no-pager || true
+echo ""
+
+echo "=== Service Logs (last 20 lines) ==="
+journalctl --user -u mail-webhooks.service -n 20 --no-pager || true
+echo ""
+
+echo "=== Container Status ==="
+podman ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(mail-webhooks|NAMES)" || echo "No mail-webhooks containers found"
+echo ""
+
+echo "=== Volume Status ==="
+podman volume ls | grep -E "(mail-webhooks|NAME)" || echo "No mail-webhooks volumes found"
+echo ""
+
+echo "=== Image Status ==="
+podman images | grep -E "(mail-webhooks|REPOSITORY)" || echo "No mail-webhooks images found"
+echo ""
+
+echo "=== Network Connectivity ==="
+if command -v curl &> /dev/null; then
+    echo "Testing localhost:${TCP_PORT:-8080}..."
+    curl -f -s "http://127.0.0.1:${TCP_PORT:-8080}/health" 2>/dev/null && echo "✓ Health endpoint accessible" || echo "✗ Health endpoint not accessible"
+else
+    echo "curl not available for testing"
+fi
+echo ""
+
+echo "=== Redis Mail Module Keys ==="
+redis-cli --scan --pattern "module/mail*/srv/tcp/*" | head -5
+echo ""
+
+echo "=== Recent Container Logs ==="
+CONTAINER_NAME=$(podman ps -a --format "{{.Names}}" | grep mail-webhooks | head -1)
+if [ ! -z "$CONTAINER_NAME" ]; then
+    echo "Logs from container: $CONTAINER_NAME"
+    podman logs --tail 20 "$CONTAINER_NAME" 2>/dev/null || echo "No logs available"
+else
+    echo "No mail-webhooks container found"
+fi
+
+echo ""
+echo "=== Diagnostic Complete ==="
