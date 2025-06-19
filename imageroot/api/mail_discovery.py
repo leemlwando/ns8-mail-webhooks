@@ -21,33 +21,36 @@ class MailServerDiscovery:
         self.cache_timeout = 300  # 5 minutes
         
     def discover_mail_servers(self) -> List[Dict[str, Any]]:
-        """Discover available NS8 mail servers using agent service discovery"""
+        """Discover available NS8 mail servers using Redis service discovery"""
         try:
             mail_servers = []
             
-            # Use NS8 agent to discover mail service providers
-            mail_providers = agent.list_service_providers(
-                service='imap',  # Look for IMAP services (mail modules)
-                transport='tcp'
-            )
-            
-            for provider in mail_providers:
-                try:
-                    module_id = provider.get('module_id', '')
-                    if module_id.startswith('mail'):
-                        server_info = {
-                            'module_id': module_id,
-                            'host': provider.get('host', 'localhost'),
-                            'port': provider.get('port', 143),
-                            'service_type': 'ns8-mail',
-                            'available': True,
-                            'integration_method': 'agent_tasks'
-                        }
-                        mail_servers.append(server_info)
-                        
-                except Exception as e:
-                    logger.error(f"Error processing mail provider {provider}: {e}")
-                    continue
+            # Use Redis to discover mail service providers directly
+            with agent.redis_connect() as rdb:
+                # Look for mail module service endpoints
+                mail_service_keys = rdb.keys('module/mail*/srv/tcp/*')
+                
+                for key in mail_service_keys:
+                    try:
+                        service_info = rdb.hgetall(key)
+                        if service_info and service_info.get('host'):
+                            # Extract module ID from key (e.g., mail1, mail2)
+                            key_parts = key.split('/')
+                            if len(key_parts) >= 2:
+                                module_id = key_parts[1]
+                                server_info = {
+                                    'module_id': module_id,
+                                    'host': service_info.get('host', 'localhost'),
+                                    'port': int(service_info.get('port', 143)),
+                                    'service_type': 'ns8-mail',
+                                    'available': True,
+                                    'integration_method': 'agent_tasks'
+                                }
+                                mail_servers.append(server_info)
+                                
+                    except Exception as e:
+                        logger.error(f"Error processing mail service {key}: {e}")
+                        continue
             
             if not mail_servers:
                 logger.warning("No NS8 mail modules found via service discovery")
@@ -56,6 +59,7 @@ class MailServerDiscovery:
             
         except Exception as e:
             logger.error(f"Error discovering mail servers: {e}")
+            return []
             return []
     
     def get_mail_server_by_id(self, module_id: str) -> Optional[Dict[str, Any]]:

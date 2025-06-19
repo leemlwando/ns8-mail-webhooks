@@ -17,11 +17,29 @@ try:
     # No external mail servers or fallback mechanisms are supported
     
     # Check if any NS8 mail modules are available
-    mail_providers = agent.list_service_providers(
-        service='mail',
-        transport='tcp',
-        filter_data={'node_id': os.environ.get('NODE_ID', '1')}
-    )
+    mail_providers = []
+    
+    # Use Redis to find mail module services
+    with agent.redis_connect() as rdb:
+        # Look for mail module service endpoints
+        mail_service_keys = rdb.keys('module/mail*/srv/tcp/*')
+        
+        for key in mail_service_keys:
+            try:
+                service_info = rdb.hgetall(key)
+                if service_info and service_info.get('host'):
+                    # Extract module ID from key (e.g., mail1, mail2)
+                    key_parts = key.split('/')
+                    if len(key_parts) >= 2:
+                        module_id = key_parts[1]
+                        mail_providers.append({
+                            'module_id': module_id,
+                            'host': service_info.get('host'),
+                            'port': service_info.get('port')
+                        })
+            except Exception as e:
+                # Skip this service if there's an error
+                continue
     
     if not mail_providers:
         # No NS8 mail modules found - this is a fatal error
@@ -35,7 +53,7 @@ try:
         sys.exit(3)
     
     # Log successful mail module discovery
-    agent.log_info(f"Found {len(mail_providers)} NS8 mail module(s): {[p['module_id'] for p in mail_providers]}")
+    agent.log_info(f"Found {len(mail_providers)} NS8 mail module(s): {[p.get('module_id', 'unknown') for p in mail_providers]}")
     
 except Exception as e:
     # Any exception in mail module discovery is treated as validation failure
