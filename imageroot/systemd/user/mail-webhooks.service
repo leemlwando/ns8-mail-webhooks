@@ -11,9 +11,9 @@ After=network.target
 Environment=PODMAN_SYSTEMD_UNIT=%n
 EnvironmentFile=%S/state/environment
 EnvironmentFile=-%S/state/secrets/passwords.env
-ExecStartPre=-/usr/bin/podman stop %N
-ExecStartPre=-/usr/bin/podman rm %N
-ExecStartPre=-/usr/bin/podman volume create mail-webhooks-data
+# Simple cleanup before start
+ExecStartPre=-/usr/bin/podman stop --ignore %N
+ExecStartPre=-/usr/bin/podman rm --ignore --force %N
 ExecStart=/usr/bin/podman run \
     --detach \
     --conmon-pidfile=%t/%n.pid \
@@ -23,7 +23,6 @@ ExecStart=/usr/bin/podman run \
     --publish=127.0.0.1:${TCP_PORT}:8080 \
     --env-file=%S/state/environment \
     --env-file=-%S/state/secrets/passwords.env \
-    --volume=mail-webhooks-data:/app/data:Z \
     ${MAIL_WEBHOOKS_IMAGE:-ghcr.io/nethserver/mail-webhooks-api:latest}
 ExecStop=/usr/bin/podman stop --ignore --time=10 %N
 ExecStopPost=/usr/bin/podman rm --ignore --force %N
@@ -31,8 +30,11 @@ PIDFile=%t/%n.pid
 Type=forking
 Restart=on-failure
 RestartSec=30
-TimeoutStartSec=300
+TimeoutStartSec=120
 TimeoutStopSec=60
+
+[Install]
+WantedBy=default.target
 
 [Install]
 WantedBy=default.target

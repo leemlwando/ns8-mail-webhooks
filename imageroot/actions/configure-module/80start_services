@@ -12,5 +12,51 @@ exec 1>&2
 
 # If the control reaches this step, the service can be enabled and started
 
-systemctl --user enable mail-webhooks.service
-systemctl --user restart mail-webhooks.service
+echo "Starting mail-webhooks services..."
+
+# Reload systemd first to pick up any changes (following NS8 patterns)
+systemctl --user daemon-reload
+
+# Check if running as root (rootfull module) - though we expect rootless
+if [[ $EUID == 0 ]]; then
+    echo "Rootfull module detected - using system services"
+    MODULE_ID=${MODULE_ID:-mail-webhooks}
+    SERVICE_NAME="mail-webhooks@${MODULE_ID}.service"
+    systemctl daemon-reload
+    systemctl enable --now "${SERVICE_NAME}"
+    echo "Started system service: ${SERVICE_NAME}"
+else
+    echo "Rootless module detected - using user services"
+    
+    # Stop service if running first (clean slate)
+    systemctl --user stop mail-webhooks.service 2>/dev/null || true
+    
+    # Enable the service
+    systemctl --user enable mail-webhooks.service
+    
+    # Start the service
+    if systemctl --user start mail-webhooks.service; then
+        echo "Successfully started user service: mail-webhooks.service"
+        
+        # Wait a moment for service to initialize
+        sleep 3
+        
+        # Verify service is actually running
+        if systemctl --user is-active --quiet mail-webhooks.service; then
+            echo "Service is active and running"
+        else
+            echo "WARNING: Service started but may not be fully active"
+            systemctl --user status mail-webhooks.service --no-pager || true
+        fi
+    else
+        echo "ERROR: Failed to start mail-webhooks.service"
+        echo "Service status:"
+        systemctl --user status mail-webhooks.service --no-pager || true
+        echo ""
+        echo "Recent service logs:"
+        journalctl --user -u mail-webhooks.service -n 10 --no-pager || true
+        exit 1
+    fi
+fi
+
+echo "Service startup completed successfully"
