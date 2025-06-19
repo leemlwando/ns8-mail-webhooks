@@ -17,6 +17,11 @@
         "mongodb://user:password@host:27017/database",        "mongodb+srv://user:password@cluster.mongodb.net/database"
       ]
     },
+    "mail_server_uuid": {
+      "type": "string",
+      "description": "UUID of the mail server to integrate with (optional - auto-discovered if empty)",
+      "default": ""
+    },
     "webhooks_collection": {
       "type": "string",
       "description": "MongoDB collection name for webhooks (default: webhooks)",
