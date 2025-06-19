@@ -50,9 +50,7 @@
               :disabled="loading.getConfiguration || loading.configureModule"
               :invalid-message="error.mongodb_url"
               ref="mongodb_url"
-            ></cv-text-input>
-
-            <cv-text-input
+            ></cv-text-input>            <cv-text-input
               :label="$t('settings.mail_server_uuid')"
               v-model="mail_server_uuid"
               :placeholder="$t('settings.mail_server_uuid_placeholder')"
@@ -60,6 +58,7 @@
               :invalid-message="error.mail_server_uuid"
               ref="mail_server_uuid"
             ></cv-text-input>
+            <p class="helper-text">{{ $t('settings.mail_server_uuid_help') }}</p>
 
             <cv-row v-if="error.configureModule">
               <cv-column>

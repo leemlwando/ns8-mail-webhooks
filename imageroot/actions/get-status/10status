@@ -14,7 +14,9 @@ import agent
 # Get module instance information
 status = {
     "instance": os.environ.get('MODULE_ID', ''),
-    "node": int(os.environ.get('NODE_ID', 0)),
+    "ui_name": "",  # UI display name for the instance
+    "node": os.environ.get('NODE_ID', '1'),
+    "node_ui_name": "",  # UI display name for the node
     "services": [],
     "images": [],
     "volumes": []
@@ -22,23 +24,47 @@ status = {
 
 # Get systemd services status
 try:
-    services_result = subprocess.run(['systemctl', '--user', 'list-units', '--type=service', '--output=json'], 
-                                    capture_output=True, text=True, check=True)
-    services_data = json.loads(services_result.stdout)
+    # Check our specific mail-webhooks service
+    service_name = "mail-webhooks.service"
     
-    # Filter services related to this module
-    module_services = []
-    for service in services_data:
-        service_name = service.get('unit', '')
-        if 'mail-webhooks' in service_name:
-            module_services.append({
-                'name': service_name,
-                'active': service.get('active') == 'active',
-                'enabled': service.get('sub') == 'running',
-                'failed': service.get('active') == 'failed'
-            })
-    
-    status['services'] = module_services
+    try:
+        # Check if service exists and get its status
+        result = subprocess.run(
+            ['systemctl', '--user', 'is-active', service_name], 
+            capture_output=True, text=True
+        )
+        active = result.returncode == 0 and result.stdout.strip() == 'active'
+        
+        # Check if service is enabled
+        result = subprocess.run(
+            ['systemctl', '--user', 'is-enabled', service_name], 
+            capture_output=True, text=True
+        )
+        enabled = result.returncode == 0 and result.stdout.strip() == 'enabled'
+        
+        # Check if service is failed
+        result = subprocess.run(
+            ['systemctl', '--user', 'is-failed', service_name], 
+            capture_output=True, text=True
+        )
+        failed = result.returncode == 0 and result.stdout.strip() == 'failed'
+        
+        status['services'].append({
+            'name': 'mail-webhooks',
+            'active': active,
+            'enabled': enabled,
+            'failed': failed
+        })
+        
+    except Exception as e:
+        # If we can't check the service, report it as inactive
+        status['services'].append({
+            'name': 'mail-webhooks',
+            'active': False,
+            'enabled': False,
+            'failed': True
+        })
+        
 except Exception as e:
     print(f"Warning: Could not get services status: {e}", file=sys.stderr)
 
@@ -50,9 +76,10 @@ try:
     
     module_images = []
     for image in images_data:
-        if 'mail-webhooks' in str(image.get('Names', [])):
+        image_names = image.get('Names', [])
+        if any('mail-webhooks' in name for name in image_names):
             module_images.append({
-                'name': image.get('Names', [''])[0] if image.get('Names') else '',
+                'name': image_names[0] if image_names else '',
                 'size': str(image.get('Size', 0)),
                 'created': image.get('Created', '')
             })
@@ -70,7 +97,8 @@ try:
     module_volumes = []
     for volume in volumes_data:
         volume_name = volume.get('Name', '')
-        if os.environ.get('MODULE_ID', '') in volume_name:
+        module_id = os.environ.get('MODULE_ID', '')
+        if module_id and module_id in volume_name:
             module_volumes.append({
                 'name': volume_name,
                 'mount': volume.get('Mountpoint', ''),
@@ -81,5 +109,6 @@ try:
 except Exception as e:
     print(f"Warning: Could not get volumes status: {e}", file=sys.stderr)
 
+# Output single JSON object
 json.dump(status, fp=sys.stdout)
 sys.exit(0)

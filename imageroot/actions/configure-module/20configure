@@ -33,14 +33,40 @@ try:
                     'http2https': data.get('http2https', False)
                 }
             )
-    
-    # Set MongoDB URL (primary configuration)
+      # Set MongoDB URL (primary configuration)
     if 'mongodb_url' in data:
         agent.set_env("MONGODB_URL", data['mongodb_url'])
     
-    # Set mail server integration
-    if 'mail_server_uuid' in data:
-        agent.set_env("MAIL_SERVER_UUID", data['mail_server_uuid'])
+    # Auto-discover mail server if not provided
+    mail_server_uuid = data.get('mail_server_uuid', '').strip()
+    if not mail_server_uuid:
+        # Auto-discover first available NS8 mail module
+        try:
+            mail_providers = agent.list_service_providers(
+                service='imap',
+                transport='tcp'
+            )
+            
+            # Find first mail module
+            for provider in mail_providers:
+                module_id = provider.get('module_id', '')
+                if module_id.startswith('mail'):
+                    mail_server_uuid = module_id
+                    agent.log_info(f"Auto-discovered NS8 mail module: {module_id}")
+                    break
+            
+            if not mail_server_uuid:
+                agent.log_warning("No NS8 mail modules found during auto-discovery")
+        except Exception as e:
+            agent.log_error(f"Error during mail server auto-discovery: {e}")
+    
+    # Set mail server integration (auto-discovered or provided)
+    if mail_server_uuid:
+        agent.set_env("MAIL_SERVER_UUID", mail_server_uuid)
+        agent.log_info(f"Using NS8 mail server: {mail_server_uuid}")
+    else:
+        agent.set_env("MAIL_SERVER_UUID", "")
+        agent.log_warning("No mail server configured - webhooks will require NS8 mail module")
       # Set collection names (with defaults)
     agent.set_env("WEBHOOKS_COLLECTION", data.get('webhooks_collection', 'webhooks'))
     agent.set_env("EVENTS_COLLECTION", data.get('events_collection', 'events'))
