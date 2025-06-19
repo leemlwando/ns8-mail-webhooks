@@ -11,20 +11,23 @@ import os
 import agent
 import agent.tasks
 
-def get_mail_module_id():
-    """Get the mail module ID using NS8 service discovery"""
+def get_mail_module_id():    """Get the mail module ID using NS8 service discovery"""
     try:
         with agent.redis_connect() as rdb:
-            # Use agent.list_service_providers to find mail services
-            # Look for IMAP services which indicate mail modules
-            for service in agent.list_service_providers(rdb, 'imap', 'tcp'):
-                module_id = service.get('module_id')
-                if module_id and module_id.startswith('mail'):
-                    return module_id
-            
-            # Fallback: Look for mail module service endpoints in Redis directly
+            # Look for mail module service endpoints in Redis directly
             # Pattern: module/mail*/srv/tcp/imap
             keys = rdb.keys('module/mail*/srv/tcp/imap')
+            
+            for key in keys:
+                # Extract module ID from key (e.g., mail1, mail2)
+                key_parts = key.split('/')
+                if len(key_parts) >= 2:
+                    module_id = key_parts[1]
+                    if module_id.startswith('mail'):
+                        return module_id
+            
+            # Alternative pattern: module/mail*/srv/tcp/*
+            keys = rdb.keys('module/mail*/srv/tcp/*')
             
             for key in keys:
                 # Extract module ID from key (e.g., mail1, mail2)

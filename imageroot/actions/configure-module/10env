@@ -13,7 +13,7 @@ try:
     data = json.load(sys.stdin)
     agent.set_env("MONGODB_URL", data.get("mongodb_url", ""))
     agent.set_env("TRAEFIK_HOST", data.get("traefik_host", ""))
-    agent.dump_env()
+    # agent.dump_env() is deprecated and no longer needed
     sys.exit(0)
 except Exception as e:
     print(f"Error in environment setup: {e}", file=sys.stderr)

@@ -21,7 +21,7 @@ try:
     # Minimal env as in kickstart
     agent.set_env('MONGODB_URL', '')
     agent.set_env('TRAEFIK_HOST', '')
-    agent.dump_env()
+    # agent.dump_env() is deprecated and no longer needed
     sys.exit(0)
 except Exception as e:
     print(f"Error setting environment variables: {e}", file=sys.stderr)

@@ -33,51 +33,59 @@ try:
                     'http2https': data.get('http2https', False)
                 }
             )
-      # Set MongoDB URL (primary configuration)
+    
+    # Set MongoDB URL (primary configuration)
     if 'mongodb_url' in data:
         agent.set_env("MONGODB_URL", data['mongodb_url'])
     
     # Auto-discover mail server if not provided
     mail_server_uuid = data.get('mail_server_uuid', '').strip()
     if not mail_server_uuid:
-        # Auto-discover first available NS8 mail module
+        # Auto-discover first available NS8 mail module using Redis
         try:
-            mail_providers = agent.list_service_providers(
-                service='imap',
-                transport='tcp'
-            )
-            
-            # Find first mail module
-            for provider in mail_providers:
-                module_id = provider.get('module_id', '')
-                if module_id.startswith('mail'):
-                    mail_server_uuid = module_id
-                    agent.log_info(f"Auto-discovered NS8 mail module: {module_id}")
-                    break
+            with agent.redis_connect() as rdb:
+                # Look for mail module service endpoints
+                mail_service_keys = rdb.keys('module/mail*/srv/tcp/*')
+                
+                for key in mail_service_keys:
+                    try:
+                        service_info = rdb.hgetall(key)
+                        if service_info and service_info.get('host'):
+                            # Extract module ID from key (e.g., mail1, mail2)
+                            key_parts = key.split('/')
+                            if len(key_parts) >= 2:
+                                module_id = key_parts[1]
+                                mail_server_uuid = module_id
+                                print(agent.SD_INFO + f"Auto-discovered NS8 mail module: {module_id}", file=sys.stderr)
+                                break
+                    except Exception:
+                        continue
             
             if not mail_server_uuid:
-                agent.log_warning("No NS8 mail modules found during auto-discovery")
+                print(agent.SD_WARNING + "No NS8 mail modules found during auto-discovery", file=sys.stderr)
         except Exception as e:
-            agent.log_error(f"Error during mail server auto-discovery: {e}")
+            print(agent.SD_ERR + f"Error during mail server auto-discovery: {e}", file=sys.stderr)
     
     # Set mail server integration (auto-discovered or provided)
     if mail_server_uuid:
         agent.set_env("MAIL_SERVER_UUID", mail_server_uuid)
-        agent.log_info(f"Using NS8 mail server: {mail_server_uuid}")
+        print(agent.SD_INFO + f"Using NS8 mail server: {mail_server_uuid}", file=sys.stderr)
     else:
         agent.set_env("MAIL_SERVER_UUID", "")
-        agent.log_warning("No mail server configured - webhooks will require NS8 mail module")
-      # Set collection names (with defaults)
+        print(agent.SD_WARNING + "No mail server configured - webhooks will require NS8 mail module", file=sys.stderr)
+    
+    # Set collection names (with defaults)
     agent.set_env("WEBHOOKS_COLLECTION", data.get('webhooks_collection', 'webhooks'))
     agent.set_env("EVENTS_COLLECTION", data.get('events_collection', 'events'))
     agent.set_env("SETTINGS_COLLECTION", data.get('settings_collection', 'settings'))
     agent.set_env("TRIGGERS_COLLECTION", data.get('triggers_collection', 'triggers'))
     agent.set_env("LOGS_COLLECTION", data.get('logs_collection', 'logs'))
     
-    # Write environment variables
-    agent.dump_env()
+    # Environment variables are automatically saved by NS8 agent
+    # agent.dump_env() is deprecated and no longer needed
     
-    sys.exit(0)
+    print(agent.SD_INFO + "Configuration completed successfully", file=sys.stderr)
+
 except Exception as e:
-    print(f"Error configuring module: {e}", file=sys.stderr)
+    print(agent.SD_ERR + f"Error configuring module: {e}", file=sys.stderr)
     sys.exit(1)
