@@ -11,10 +11,8 @@ After=network.target
 Environment=PODMAN_SYSTEMD_UNIT=%n
 EnvironmentFile=%S/state/environment
 EnvironmentFile=-%S/state/secrets/passwords.env
-# Stop any existing container first
 ExecStartPre=-/usr/bin/podman stop %N
 ExecStartPre=-/usr/bin/podman rm %N
-# Create volume if needed
 ExecStartPre=-/usr/bin/podman volume create mail-webhooks-data
 ExecStart=/usr/bin/podman run \
     --detach \
@@ -31,9 +29,9 @@ ExecStop=/usr/bin/podman stop --ignore --time=10 %N
 ExecStopPost=/usr/bin/podman rm --ignore --force %N
 PIDFile=%t/%n.pid
 Type=forking
-Restart=always
+Restart=on-failure
 RestartSec=30
-TimeoutStartSec=120
+TimeoutStartSec=300
 TimeoutStopSec=60
 
 [Install]

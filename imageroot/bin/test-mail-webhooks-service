@@ -1,0 +1,136 @@
+#!/bin/bash
+
+#
+# Manual test script for mail-webhooks service debugging
+#
+
+echo "=== Mail Webhooks Service Manual Test ==="
+echo "Timestamp: $(date)"
+echo ""
+
+# Source environment
+if [ -f "/home/mail-webhooks*/state/environment" ]; then
+    echo "Sourcing environment from state file..."
+    source /home/mail-webhooks*/state/environment
+    echo "Environment loaded:"
+    echo "  TCP_PORT: ${TCP_PORT}"
+    echo "  MONGODB_URL: ${MONGODB_URL:0:30}..."
+    echo "  MAIL_SERVER_UUID: ${MAIL_SERVER_UUID}"
+else
+    echo "No environment file found, using defaults..."
+    export TCP_PORT=${TCP_PORT:-8080}
+fi
+
+echo ""
+echo "=== Image Check ==="
+IMAGE_NAME="${MAIL_WEBHOOKS_IMAGE:-ghcr.io/nethserver/mail-webhooks-api:latest}"
+echo "Testing image: ${IMAGE_NAME}"
+
+if podman image exists "${IMAGE_NAME}"; then
+    echo "✓ Image exists"
+else
+    echo "✗ Image does not exist!"
+    echo "Available images:"
+    podman images | grep -E "(webhooks|REPOSITORY)" || echo "No webhook images found"
+    echo ""
+    echo "Attempting to pull image..."
+    if podman pull "${IMAGE_NAME}"; then
+        echo "✓ Successfully pulled image"
+    else
+        echo "✗ Failed to pull image"
+        exit 1
+    fi
+fi
+
+echo ""
+echo "=== Manual Container Test ==="
+echo "Running container manually for 30 seconds..."
+
+# Stop any existing test container
+podman stop mail-webhooks-test 2>/dev/null || true
+podman rm mail-webhooks-test 2>/dev/null || true
+
+# Create volume if needed
+podman volume create mail-webhooks-data 2>/dev/null || true
+
+echo "Starting container..."
+if podman run -d \
+    --name=mail-webhooks-test \
+    --publish=127.0.0.1:${TCP_PORT}:8080 \
+    --env MONGODB_URL="${MONGODB_URL:-}" \
+    --env MAIL_SERVER_UUID="${MAIL_SERVER_UUID:-}" \
+    --volume=mail-webhooks-data:/app/data:Z \
+    "${IMAGE_NAME}"; then
+    
+    echo "✓ Container started successfully"
+    echo ""
+    echo "Waiting 10 seconds for startup..."
+    sleep 10
+    
+    echo ""
+    echo "=== Container Status ==="
+    podman ps | grep mail-webhooks-test || echo "Container not running"
+    
+    echo ""
+    echo "=== Container Logs ==="
+    podman logs mail-webhooks-test 2>&1 || echo "No logs available"
+    
+    echo ""
+    echo "=== Health Check ==="
+    if command -v curl &> /dev/null; then
+        if curl -f -s "http://127.0.0.1:${TCP_PORT}/health" > /dev/null 2>&1; then
+            echo "✓ Health endpoint accessible"
+        else
+            echo "✗ Health endpoint not accessible"
+            echo "Trying root endpoint..."
+            curl -s "http://127.0.0.1:${TCP_PORT}/" 2>&1 || echo "Root endpoint also failed"
+        fi
+    else
+        echo "curl not available for testing"
+    fi
+    
+    echo ""
+    echo "Cleaning up test container..."
+    podman stop mail-webhooks-test 2>/dev/null || true
+    podman rm mail-webhooks-test 2>/dev/null || true
+    
+else
+    echo "✗ Failed to start container"
+    echo ""
+    echo "=== Container Logs ==="
+    podman logs mail-webhooks-test 2>&1 || echo "No logs available"
+    
+    # Cleanup
+    podman rm mail-webhooks-test 2>/dev/null || true
+    exit 1
+fi
+
+echo ""
+echo "=== Systemd Service Test ==="
+echo "Testing simple systemd service..."
+
+# Copy simple service file
+mkdir -p ~/.config/systemd/user/
+cp /usr/local/agent/systemd/user/mail-webhooks-simple.service ~/.config/systemd/user/ 2>/dev/null || echo "Could not copy simple service file"
+
+systemctl --user daemon-reload
+
+if systemctl --user start mail-webhooks-simple.service; then
+    echo "✓ Simple service started"
+    sleep 5
+    
+    if systemctl --user is-active --quiet mail-webhooks-simple.service; then
+        echo "✓ Simple service is active"
+    else
+        echo "✗ Simple service is not active"
+        systemctl --user status mail-webhooks-simple.service --no-pager || true
+    fi
+    
+    systemctl --user stop mail-webhooks-simple.service 2>/dev/null || true
+else
+    echo "✗ Failed to start simple service"
+    systemctl --user status mail-webhooks-simple.service --no-pager || true
+fi
+
+echo ""
+echo "=== Test Complete ==="

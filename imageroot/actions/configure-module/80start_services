@@ -12,45 +12,5 @@ exec 1>&2
 
 # If the control reaches this step, the service can be enabled and started
 
-echo "Starting mail-webhooks services..."
-
-# Reload systemd first to pick up any changes
-systemctl --user daemon-reload
-
-# Check if running as root (rootfull module)
-if [[ $EUID == 0 ]]; then
-    echo "Rootfull module detected - using system services"
-    # Rootfull module - use system service with module ID
-    MODULE_ID=${MODULE_ID:-mail-webhooks}
-    SERVICE_NAME="mail-webhooks@${MODULE_ID}.service"
-    systemctl daemon-reload
-    systemctl enable --now "${SERVICE_NAME}"
-    echo "Started system service: ${SERVICE_NAME}"
-else
-    echo "Rootless module detected - using user services"
-    # Rootless module - use user service
-    
-    # Stop service if running first
-    systemctl --user stop mail-webhooks.service 2>/dev/null || true
-    
-    # Enable and start the service
-    systemctl --user enable mail-webhooks.service
-    systemctl --user start mail-webhooks.service
-    
-    # Wait a moment for service to initialize
-    sleep 3
-    
-    # Check service status
-    if systemctl --user is-active --quiet mail-webhooks.service; then
-        echo "Started user service: mail-webhooks.service"
-    else
-        echo "Failed to start mail-webhooks.service"
-        systemctl --user status mail-webhooks.service --no-pager || true
-        exit 1
-    fi
-fi
-
-# Mail monitor service disabled for Phase 1 (API-only implementation)
-echo "Mail monitor service disabled - Phase 1 implementation (API only)"
-
-echo "Service startup completed successfully"
+systemctl --user enable mail-webhooks.service
+systemctl --user restart mail-webhooks.service
