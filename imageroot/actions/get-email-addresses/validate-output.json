@@ -1,0 +1,84 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "get-email-addresses output",
+    "$id": "http://schema.nethserver.org/mail-webhooks/get-email-addresses-output.json",
+    "description": "List of email addresses available for webhook creation",
+    "examples": [
+        {
+            "success": true,
+            "source": "ns8-mail",
+            "mail_module_id": "mail1",
+            "email_addresses": [
+                {
+                    "email": "admin@example.com",
+                    "type": "address",
+                    "description": "Administrator email",
+                    "internal": false
+                },
+                {
+                    "email": "user@example.com",
+                    "type": "user",
+                    "description": "User mailbox",
+                    "internal": false,
+                    "enabled": true
+                }
+            ]
+        }
+    ],
+    "type": "object",
+    "required": [
+        "success",
+        "source",
+        "email_addresses"
+    ],
+    "properties": {
+        "success": {
+            "type": "boolean",
+            "title": "Operation success status"
+        },        "source": {
+            "type": "string",
+            "title": "Source of email addresses",
+            "enum": ["ns8-mail"],
+            "description": "Email addresses source - only NS8 mail module supported"
+        },
+        "mail_module_id": {
+            "type": "string",
+            "title": "Mail module ID",
+            "description": "ID of the NS8 mail module if source is ns8-mail"
+        },
+        "email_addresses": {
+            "type": "array",
+            "title": "Email addresses list",
+            "items": {
+                "type": "object",
+                "required": ["email", "type", "description", "internal"],
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "title": "Email address"
+                    },                    "type": {
+                        "type": "string",
+                        "title": "Address type",
+                        "enum": ["address", "user", "mailbox"],
+                        "description": "Type of email address entry from NS8 mail module"
+                    },
+                    "description": {
+                        "type": "string",
+                        "title": "Address description"
+                    },
+                    "internal": {
+                        "type": "boolean",
+                        "title": "Internal address flag",
+                        "description": "Whether this is an internal system address"
+                    },
+                    "enabled": {
+                        "type": "boolean",
+                        "title": "Enabled status",
+                        "description": "Whether the mailbox/address is enabled (optional)"
+                    }
+                }
+            }
+        }
+    }
+}

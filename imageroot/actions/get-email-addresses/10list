@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import os
+import agent
+import agent.tasks
+
+def get_mail_module_id():
+    """Get the mail module ID using NS8 service discovery"""
+    try:
+        with agent.redis_connect() as rdb:
+            # Use agent.list_service_providers to find mail services
+            # Look for IMAP services which indicate mail modules
+            for service in agent.list_service_providers(rdb, 'imap', 'tcp'):
+                module_id = service.get('module_id')
+                if module_id and module_id.startswith('mail'):
+                    return module_id
+            
+            # Fallback: Look for mail module service endpoints in Redis directly
+            # Pattern: module/mail*/srv/tcp/imap
+            keys = rdb.keys('module/mail*/srv/tcp/imap')
+            
+            for key in keys:
+                # Extract module ID from key (e.g., mail1, mail2)
+                parts = key.split('/')
+                if len(parts) >= 2:
+                    module_id = parts[1]  # mail1, mail2, etc.
+                    
+                    # Verify this is an active mail module
+                    service_info = rdb.hgetall(key)
+                    if service_info and service_info.get('host'):
+                        return module_id
+        
+        # No mail modules found
+        return None
+        
+    except Exception as e:
+        print(f"Error discovering mail module: {e}", file=sys.stderr)
+        return None
+
+def get_email_addresses_from_ns8_mail():
+    """Get email addresses from NS8 mail module via agent.tasks.run"""
+    try:
+        # Get mail module ID
+        mail_module_id = get_mail_module_id()
+        if not mail_module_id:
+            return {
+                'success': False,
+                'error': 'No NS8 mail module found',
+                'source': 'ns8-mail',
+                'email_addresses': []
+            }
+            
+        # Call the list-addresses action on the mail module
+        addresses_result = agent.tasks.run(
+            agent_id=f"{mail_module_id}@node",
+            action='list-addresses',
+            data={}
+        )
+        
+        # Call the list-user-mailboxes action on the mail module  
+        mailboxes_result = agent.tasks.run(
+            agent_id=f"{mail_module_id}@node",
+            action='list-user-mailboxes',
+            data={}
+        )
+        
+        # Call the list-domains action on the mail module
+        domains_result = agent.tasks.run(
+            agent_id=f"{mail_module_id}@node",
+            action='list-domains',
+            data={}
+        )
+        
+        # Extract and format email addresses
+        email_addresses = []
+        
+        # Process addresses
+        if 'addresses' in addresses_result:
+            for addr in addresses_result['addresses']:
+                if addr.get('atype') in ['domain', 'adduser']:
+                    # Build full email address
+                    local = addr.get('local', '')
+                    if addr.get('atype') == 'domain' and 'domain' in addr:
+                        email = f"{local}@{addr['domain']}"
+                        email_addresses.append({
+                            'email': email,
+                            'type': 'address',
+                            'description': addr.get('description', ''),
+                            'internal': addr.get('internal', False)
+                        })
+                    elif addr.get('atype') == 'adduser':
+                        # For adduser addresses, append to domains with addusers=1
+                        for domain in domains_result:
+                            if domain.get('addusers', False):
+                                email = f"{local}@{domain['domain']}"
+                                email_addresses.append({
+                                    'email': email,
+                                    'type': 'user',
+                                    'description': addr.get('description', ''),
+                                    'internal': addr.get('internal', False)
+                                })
+        
+        # Process user mailboxes for additional addresses
+        if 'user_mailboxes' in mailboxes_result:
+            for mailbox in mailboxes_result['user_mailboxes']:
+                user = mailbox.get('user', '')
+                if user and user != 'vmail':
+                    # Add to domains that allow user addition
+                    for domain in domains_result:
+                        if domain.get('addusers', False):
+                            email = f"{user}@{domain['domain']}"
+                            # Avoid duplicates
+                            if not any(ea['email'] == email for ea in email_addresses):
+                                email_addresses.append({
+                                    'email': email,
+                                    'type': 'mailbox',
+                                    'description': f"User mailbox: {user}",
+                                    'internal': False,
+                                    'enabled': mailbox.get('enabled', True)
+                                })
+        
+        return {
+            'success': True,
+            'source': 'ns8-mail',
+            'mail_module_id': mail_module_id,
+            'email_addresses': email_addresses
+        }
+        
+    except Exception as e:
+        print(f"Error calling NS8 mail module: {e}", file=sys.stderr)
+        return {
+            'success': False,
+            'error': str(e),
+            'source': 'ns8-mail',
+            'email_addresses': []
+        }
+
+def main():
+    """Main function - NS8 mail integration only"""
+    
+    # Only attempt NS8 mail module integration
+    result = get_email_addresses_from_ns8_mail()
+    
+    if not result['success']:
+        # Exit with error if mail integration fails
+        print(f"Mail integration failed: {result['error']}", file=sys.stderr)
+        agent.set_status('validation-failed')
+        json.dump([{
+            'field': 'mail_integration',
+            'parameter': 'mail_integration', 
+            'value': result['error'],
+            'error': 'ns8_mail_module_required'
+        }], fp=sys.stdout)
+        sys.exit(3)
+    
+    json.dump(result, sys.stdout)
+
+if __name__ == "__main__":
+    main()

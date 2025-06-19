@@ -1,40 +1,87 @@
 # ns8-mail-webhooks
 
-Mail Webhooks module for [NethServer 8](https://github.com/NethServer/ns8-core) that provides webhook triggers for incoming mail events.
-
-# ns8-mail-webhooks
-
-Mail Webhooks module for [NethServer 8](https://github.com/NethServer/ns8-core) that provides comprehensive webhook triggers for incoming mail events with advanced IMAP integration.
+Mail Webhooks module for [NethServer 8](https://github.com/NethServer/ns8-core) that provides webhook triggers for incoming mail events through direct integration with the NS8 mail module.
 
 ## Features
 
 ### Core Functionality
 - **Webhook Management**: Create, update, delete and test webhooks with full CRUD API
+- **NS8 Mail Integration**: Direct integration with NS8 mail module - no external connections
 - **Multiple Trigger Types**: Real-time and interval-based triggers with configurable intervals
 - **Payload Formats**: Support for RAW and JSON payload types with message parsing
 - **External MongoDB**: Uses external MongoDB instance (no self-hosted database)
 
-### Advanced Mail Integration
-- **IMAP Integration**: Full IMAP client with SSL/TLS support for direct mailbox access
-- **Mail Server Discovery**: Automatic detection of NS8 mail server instances via Redis
-- **Multi-Server Support**: Monitor multiple mail servers simultaneously
-- **Connection Testing**: Built-in mail server connection validation
+### NS8-Only Mail Integration
+- **Mail Module Discovery**: Automatic detection of NS8 mail server instances via agent communication
+- **Service Communication**: Uses NS8 agent.tasks.run() for inter-module communication
+- **Redis Integration**: Discovers mail services via NS8 Redis infrastructure
+- **No External Connections**: Strictly NS8-internal - no IMAP, SMTP, or external mail server connections
 
 ### Message Processing
 - **Advanced Filtering**: Sender, subject, and body pattern matching with regex support
 - **Attachment Filtering**: Filter by attachment presence and message size
-- **Mailbox Targeting**: Monitor specific mailboxes or all mailboxes
-- **Message Parsing**: Complete email parsing with headers, body, and attachments
-
-### Post-Processing Actions
-- **Message Actions**: Mark as read, delete, or move messages after webhook delivery
-- **Custom Flags**: Add custom flags to processed messages
-- **Action Logging**: Track all post-processing actions with detailed logs
+- **Mailbox Targeting**: Monitor specific mailboxes available through NS8 mail module
+- **Message Parsing**: Email parsing through NS8 mail module API
 
 ### Background Services
-- **Mail Monitor Service**: Dedicated background service for continuous monitoring
+- **Mail Monitor Service**: Dedicated background service for NS8 mail integration
 - **Auto-Recovery**: Automatic service recovery with configurable retry logic
 - **Performance Monitoring**: Response time tracking and execution logging
+
+## Critical Requirements
+
+⚠️ **NS8-Only Integration**: This module is designed exclusively for NethServer 8 environments and will NOT work with external mail servers.
+
+### Strict NS8 Requirements
+
+1. **NS8 Mail Module Required**: An active NS8 mail module (ns8-mail) must be installed and running
+2. **No External Connections**: The module will not attempt connections to external IMAP, SMTP, or mail servers
+3. **No Fallback Mechanisms**: If NS8 mail module is unavailable, the module will fail validation - no fallbacks
+4. **Validation Enforced**: Configuration will fail if no NS8 mail module is detected
+
+### Why NS8-Only?
+
+- **Security**: Eliminates external network dependencies and potential security vulnerabilities
+- **Reliability**: Ensures consistent operation within the NS8 ecosystem
+- **Simplicity**: Reduces complexity by removing multiple integration paths
+- **Compliance**: Aligns with NS8 architectural principles for module isolation
+
+### NS8 Mail Module Integration
+
+- **Direct Communication**: Uses `agent.tasks.run()` to call mail module actions
+- **Service Discovery**: Discovers mail modules via Redis using `agent.list_service_providers()`
+- **Real-time Data**: Gets current email addresses, domains, and user mailboxes
+- **Actions Used**: `list-addresses`, `list-user-mailboxes`, `list-domains`
+
+### Requirements
+
+- **NS8 Environment**: This module requires a running NS8 cluster
+- **Mail Module**: An active NS8 mail module (ns8-mail) must be installed
+- **No External Connections**: Does not attempt connections to external mail servers
+
+### Email Address Discovery
+
+The system compiles email addresses from:
+- Configured mail addresses (aliases, forwards)
+- User mailboxes on domains with `addusers=true`
+- Public mailboxes and shared addresses
+- Custom address configurations
+
+### Testing Integration
+
+Use the test action to verify mail integration:
+
+```bash
+# Test mail module connectivity and discovery
+runagent test-mail-integration
+
+# Get available email addresses
+runagent get-email-addresses
+```
+
+If no NS8 mail module is found, the module will fail validation and require proper mail integration.
+
+See `MAIL_INTEGRATION.md` for detailed technical documentation.
 
 ## Install
 

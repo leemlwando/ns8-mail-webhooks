@@ -31,5 +31,5 @@ if [ ! -f "app.py" ]; then
     exit 1
 fi
 
-echo "Starting FastAPI application..."
-exec python -m uvicorn app:app --host 0.0.0.0 --port 8080
+echo "Starting FastAPI application with mail monitor service..."
+exec python main.py

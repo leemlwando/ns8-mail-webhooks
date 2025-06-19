@@ -247,9 +247,6 @@ class MailMonitorService:
                 # Check NS8 mail module status
                 self._check_mail_module_status()
                 
-                # Process real-time triggers (check for new messages)
-                self._process_realtime_triggers()
-                
                 # Sleep for monitoring interval
                 time.sleep(60)  # Check every minute
                 
@@ -320,113 +317,22 @@ class MailMonitorService:
         except Exception as e:
             logger.error(f"Error processing interval webhook: {e}")
 
-    def _process_realtime_triggers(self):
-        """Process webhooks with real-time triggers by checking NS8 mail"""
+    def _check_mail_module_status(self):
+        """Check NS8 mail module status and availability"""
         try:
-            if not self.mongodb_client or not self.mail_discovery:
+            if not self.mail_discovery:
                 return
-                
-            # Get all active real-time webhooks
-            db = self.mongodb_client[self.settings.get('database_name', 'mail_webhooks')]
-            webhooks_collection = db[self.settings.get('webhooks_collection', 'webhooks')]
             
-            realtime_webhooks = list(webhooks_collection.find({
-                'active': True,
-                'trigger_config.trigger_type': 'realtime'
-            }))
-            
-            if not realtime_webhooks:
-                return
-                
-            # Get mail servers
+            # Discover available NS8 mail modules
             mail_servers = self.mail_discovery.discover_mail_servers()
+            
             if not mail_servers:
-                logger.warning("No NS8 mail servers found for real-time monitoring")
-                return
+                logger.warning("No NS8 mail modules found - service is NS8-only")
+            else:
+                logger.debug(f"Found {len(mail_servers)} NS8 mail servers")
                 
-            # For each webhook, check for new messages through NS8 mail module
-            for webhook in realtime_webhooks:
-                try:
-                    self._check_webhook_mailboxes(webhook, mail_servers[0])
-                except Exception as e:
-                    logger.error(f"Error checking webhook {webhook.get('_id')}: {e}")
-                    
         except Exception as e:
-            logger.error(f"Error processing real-time triggers: {e}")
-
-    def _check_webhook_mailboxes(self, webhook: Dict, mail_server: Dict):
-        """Check specific mailboxes for webhook triggers via NS8 mail API"""
-        try:
-            webhook_id = str(webhook['_id'])
-            mailboxes = webhook.get('trigger_config', {}).get('mailboxes', ['INBOX'])
-            
-            if not mailboxes:
-                mailboxes = ['INBOX']
-                
-            # Check for new messages in each mailbox via NS8 mail module
-            module_id = mail_server['module_id']
-            
-            for mailbox in mailboxes:
-                try:
-                    # Call NS8 mail module to check for new messages
-                    # This would be the actual integration point with NS8 mail
-                    new_messages = self._get_new_messages_from_ns8(module_id, mailbox, webhook)
-                    
-                    for message in new_messages:
-                        # Process each new message through webhook processor
-                        self.webhook_processor.process_message_webhooks(message, 'realtime')
-                        
-                except Exception as e:
-                    logger.error(f"Error checking mailbox {mailbox} for webhook {webhook_id}: {e}")
-                    
-        except Exception as e:
-            logger.error(f"Error checking webhook mailboxes: {e}")
-
-    def _get_new_messages_from_ns8(self, module_id: str, mailbox: str, webhook: Dict) -> List[Dict]:
-        """Get new messages from NS8 mail module for specific mailbox"""
-        try:
-            # This would integrate with NS8 mail module API to get new messages
-            # For now, we'll simulate checking and return empty list
-            # In a real implementation, this would:
-            # 1. Call NS8 mail module to get message list for mailbox
-            # 2. Compare with last checked timestamp for this webhook
-            # 3. Return only new messages since last check
-            
-            last_check = webhook.get('last_checked_realtime', datetime.now(timezone.utc) - timedelta(minutes=5))
-            
-            # TODO: Implement actual NS8 mail module integration here
-            # Example structure of what this should do:
-            # try:
-            #     result = agent.tasks.run(
-            #         agent_id=f'{module_id}@node',
-            #         action='get-messages',
-            #         data={
-            #             'mailbox': mailbox,
-            #             'since': last_check.isoformat(),
-            #             'limit': 50
-            #         }
-            #     )
-            #     
-            #     if result.get('exit_code', 0) == 0:
-            #         messages_data = json.loads(result.get('output', '{}'))
-            #         return messages_data.get('messages', [])
-            # except Exception as e:
-            #     logger.error(f"Error calling NS8 mail module: {e}")
-            
-            # Update last checked timestamp
-            if self.mongodb_client:
-                db = self.mongodb_client[self.settings.get('database_name', 'mail_webhooks')]
-                webhooks_collection = db[self.settings.get('webhooks_collection', 'webhooks')]
-                webhooks_collection.update_one(
-                    {'_id': webhook['_id']},
-                    {'$set': {'last_checked_realtime': datetime.now(timezone.utc)}}
-                )
-            
-            return []  # Return empty for now until actual NS8 integration is implemented
-            
-        except Exception as e:
-            logger.error(f"Error getting new messages from NS8 mail: {e}")
-            return []
+            logger.error(f"Error checking mail module status: {e}")
 
 
 # Global service instance

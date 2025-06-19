@@ -17,32 +17,41 @@ from pymongo import MongoClient
 from bson import ObjectId
 import requests
 
+# Add mail discovery import
+from .mail_discovery import mail_discovery
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Pydantic models for request/response
-class WebhookBase(BaseModel):
-    name: str
-    url: HttpUrl
-    api_key: Optional[str] = ""
-    payload_type: str
+class TriggerConfig(BaseModel):
     trigger_type: str
-    interval: Optional[int] = 60
+    interval_seconds: Optional[int] = 300
     mailboxes: Optional[List[str]] = []
-    filters: Optional[Dict[str, Any]] = {}
-    active: Optional[bool] = True
-
-    @validator('payload_type')
-    def validate_payload_type(cls, v):
-        if v not in ['RAW', 'JSON']:
-            raise ValueError('payload_type must be RAW or JSON')
-        return v
+    mail_filters: Optional[Dict[str, Any]] = {}
 
     @validator('trigger_type')
     def validate_trigger_type(cls, v):
         if v not in ['realtime', 'interval']:
             raise ValueError('trigger_type must be realtime or interval')
+        return v
+
+class WebhookBase(BaseModel):
+    name: str
+    url: HttpUrl
+    api_key: Optional[str] = ""
+    payload_format: str = "json"
+    trigger_config: TriggerConfig
+    email_addresses: Optional[List[str]] = []  # Specific email addresses to monitor
+    headers: Optional[Dict[str, str]] = {}
+    timeout: Optional[int] = 30
+    active: Optional[bool] = True
+
+    @validator('payload_format')
+    def validate_payload_format(cls, v):
+        if v not in ['raw', 'json']:
+            raise ValueError('payload_format must be raw or json')
         return v
 
 class WebhookCreate(WebhookBase):
@@ -279,8 +288,47 @@ async def list_webhooks():
 
 @app.post("/api/webhooks", response_model=WebhookResponse, status_code=status.HTTP_201_CREATED)
 async def create_webhook(webhook: WebhookCreate):
-    """Create a new webhook"""
+    """Create a new webhook with NS8 mail integration validation"""
     try:
+        # Validate NS8 mail integration first
+        mail_servers = mail_discovery.discover_mail_servers()
+        if not mail_servers:
+            raise HTTPException(
+                status_code=503,
+                detail="No NS8 mail modules found. Cannot create webhooks without mail integration."
+            )
+        
+        # If specific mailboxes are requested, validate they exist
+        if webhook.mailboxes:
+            available_addresses = mail_discovery.get_email_addresses()
+            available_mailboxes = mail_discovery.get_user_mailboxes()
+            
+            # Combine available email options
+            valid_emails = set()
+            for addr in available_addresses:
+                if isinstance(addr, dict):
+                    valid_emails.add(addr.get('address', ''))
+                else:
+                    valid_emails.add(str(addr))
+            
+            for mailbox in available_mailboxes:
+                if isinstance(mailbox, dict):
+                    valid_emails.add(mailbox.get('address', ''))
+                else:
+                    valid_emails.add(str(mailbox))
+            
+            # Check if requested mailboxes are valid
+            invalid_mailboxes = []
+            for mailbox in webhook.mailboxes:
+                if mailbox not in valid_emails and mailbox != 'INBOX':
+                    invalid_mailboxes.append(mailbox)
+            
+            if invalid_mailboxes:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid mailboxes: {invalid_mailboxes}. Available: {list(valid_emails)}"
+                )
+        
         webhooks_coll = get_collection('webhooks')
         
         # Create webhook document
@@ -289,7 +337,9 @@ async def create_webhook(webhook: WebhookCreate):
             'url': str(webhook.url),  # Convert HttpUrl to string
             'created_at': datetime.now(timezone.utc),
             'updated_at': datetime.now(timezone.utc),
-            'last_triggered': None
+            'last_triggered': None,
+            'mail_server_id': mail_servers[0]['module_id'],  # Associate with first available mail server
+            'validated_with_ns8_mail': True
         }
         
         result = webhooks_coll.insert_one(webhook_doc)
@@ -299,7 +349,7 @@ async def create_webhook(webhook: WebhookCreate):
         response_dict = serialize_objectid(webhook_doc)
         response_dict['id'] = response_dict.pop('_id')
         
-        logger.info(f"Created webhook: {webhook.name}")
+        logger.info(f"Created webhook '{webhook.name}' for NS8 mail server {mail_servers[0]['module_id']}")
         return response_dict
         
     except Exception as e:
@@ -479,6 +529,77 @@ async def list_events(limit: int = 50):
     except Exception as e:
         logger.error(f"Error listing events: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/mail/addresses")
+async def get_available_email_addresses():
+    """Get available email addresses from NS8 mail module"""
+    try:
+        mail_servers = mail_discovery.discover_mail_servers()
+        if not mail_servers:
+            raise HTTPException(
+                status_code=503, 
+                detail="No NS8 mail modules found. This module requires an active NS8 mail server."
+            )
+        
+        # Get addresses from first available mail server
+        addresses = mail_discovery.get_email_addresses()
+        mailboxes = mail_discovery.get_user_mailboxes()
+        
+        return {
+            "success": True,
+            "mail_servers_found": len(mail_servers),
+            "addresses": addresses,
+            "mailboxes": mailboxes,
+            "total_email_options": len(addresses) + len(mailboxes)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting email addresses: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get email addresses: {str(e)}")
+
+@app.get("/api/mail/test")
+async def test_mail_integration():
+    """Test integration with NS8 mail module"""
+    try:
+        result = mail_discovery.test_mail_integration()
+        
+        if not result['success']:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "success": False,
+                    "message": "NS8 mail integration test failed",
+                    "details": result
+                }
+            )
+        
+        return {
+            "success": True,
+            "message": "NS8 mail integration successful",
+            "details": result
+        }
+        
+    except Exception as e:
+        logger.error(f"Error testing mail integration: {e}")
+        raise HTTPException(status_code=500, detail=f"Mail integration test failed: {str(e)}")
+
+@app.get("/api/mail/servers")
+async def get_mail_servers():
+    """Get available NS8 mail servers"""
+    try:
+        mail_servers = mail_discovery.discover_mail_servers()
+        
+        return {
+            "success": True,
+            "mail_servers": mail_servers,
+            "count": len(mail_servers)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting mail servers: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get mail servers: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

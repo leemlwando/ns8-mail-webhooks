@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import os
+
+def test_redis_discovery():
+    """Test Redis connectivity and mail module discovery"""
+    try:
+        import agent
+        
+        result = {
+            "redis_connection": False,
+            "mail_modules": [],
+            "service_providers": [],
+            "redis_keys": [],
+            "errors": []
+        }
+        
+        try:
+            with agent.redis_connect() as rdb:
+                result["redis_connection"] = True
+                
+                # Test 1: Service provider discovery
+                try:
+                    for service in agent.list_service_providers(rdb, 'imap', 'tcp'):
+                        result["service_providers"].append({
+                            "module_id": service.get('module_id'),
+                            "host": service.get('host'),
+                            "port": service.get('port'),
+                            "ui_name": service.get('ui_name', ''),
+                            "user_domain": service.get('user_domain', '')
+                        })
+                except Exception as e:
+                    result["errors"].append(f"Service provider discovery error: {e}")
+                
+                # Test 2: Direct Redis key pattern matching
+                try:
+                    keys = rdb.keys('module/mail*/srv/tcp/imap')
+                    for key in keys:
+                        try:
+                            service_info = rdb.hgetall(key)
+                            module_id = key.split('/')[1] if '/' in key else key
+                            result["mail_modules"].append({
+                                "key": key,
+                                "module_id": module_id,
+                                "service_info": dict(service_info)
+                            })
+                        except Exception as e:
+                            result["errors"].append(f"Error reading key {key}: {e}")
+                            
+                    result["redis_keys"] = keys
+                except Exception as e:
+                    result["errors"].append(f"Redis key query error: {e}")
+                    
+        except Exception as e:
+            result["errors"].append(f"Redis connection error: {e}")
+            
+        return result
+        
+    except ImportError as e:
+        return {
+            "redis_connection": False,
+            "mail_modules": [],
+            "service_providers": [],
+            "redis_keys": [],
+            "errors": [f"Agent module not available: {e}"]
+        }
+
+def test_agent_tasks():
+    """Test agent.tasks module availability"""
+    try:
+        import agent.tasks
+        return {
+            "available": True,
+            "module_path": agent.tasks.__file__ if hasattr(agent.tasks, '__file__') else 'built-in'
+        }
+    except ImportError as e:
+        return {
+            "available": False,
+            "error": str(e)
+        }
+
+def test_mail_module_call():
+    """Test calling a mail module action (if available)"""
+    try:
+        import agent.tasks
+        
+        # Try to discover a mail module first
+        redis_result = test_redis_discovery()
+        
+        if not redis_result["mail_modules"] and not redis_result["service_providers"]:
+            return {
+                "attempted": False,
+                "reason": "No mail modules discovered"
+            }
+        
+        # Try to get module ID
+        module_id = None
+        if redis_result["service_providers"]:
+            module_id = redis_result["service_providers"][0]["module_id"]
+        elif redis_result["mail_modules"]:
+            module_id = redis_result["mail_modules"][0]["module_id"]
+        else:
+            module_id = "mail1"  # Default attempt
+        
+        if not module_id:
+            return {
+                "attempted": False,
+                "reason": "Could not determine mail module ID"
+            }
+        
+        # Try to call list-domains action (lightweight)
+        try:
+            result = agent.tasks.run(
+                agent_id=f'{module_id}@node',
+                action='list-domains',
+                data={}
+            )
+            
+            return {
+                "attempted": True,
+                "success": True,
+                "module_id": module_id,
+                "result_type": type(result).__name__,
+                "result_keys": list(result.keys()) if isinstance(result, dict) else "non-dict",
+                "domains_count": len(result) if isinstance(result, list) else "unknown"
+            }
+            
+        except Exception as e:
+            return {
+                "attempted": True,
+                "success": False,
+                "module_id": module_id,
+                "error": str(e)
+            }
+            
+    except ImportError as e:
+        return {
+            "attempted": False,
+            "reason": f"Agent tasks not available: {e}"
+        }
+
+def main():
+    """Main test function"""
+    
+    # Comprehensive test results
+    test_results = {
+        "environment": {
+            "module_id": os.environ.get('MODULE_ID', 'unknown'),
+            "agent_task_id": os.environ.get('AGENT_TASK_ID', 'unknown'),
+            "mail_server_uuid": os.environ.get('MAIL_SERVER_UUID', ''),
+            "python_path": sys.path[0] if sys.path else 'unknown'
+        },
+        "redis_discovery": test_redis_discovery(),
+        "agent_tasks": test_agent_tasks(),
+        "mail_module_call": test_mail_module_call()
+    }
+    
+    # Determine overall status
+    redis_ok = test_results["redis_discovery"]["redis_connection"]
+    tasks_ok = test_results["agent_tasks"]["available"]
+    call_ok = test_results["mail_module_call"].get("success", False)
+    
+    test_results["summary"] = {
+        "redis_connection": redis_ok,
+        "agent_tasks_available": tasks_ok,
+        "mail_module_callable": call_ok,
+        "integration_ready": redis_ok and tasks_ok,
+        "mail_modules_found": len(test_results["redis_discovery"]["mail_modules"]),
+        "service_providers_found": len(test_results["redis_discovery"]["service_providers"])
+    }
+    
+    json.dump(test_results, sys.stdout, indent=2)
+
+if __name__ == "__main__":
+    main()

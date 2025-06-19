@@ -1,0 +1,103 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "test-mail-integration output",
+    "$id": "http://schema.nethserver.org/mail-webhooks/test-mail-integration-output.json",
+    "description": "Test results for NS8 mail module integration",
+    "type": "object",
+    "required": [
+        "environment",
+        "redis_discovery",
+        "agent_tasks",
+        "mail_module_call",
+        "summary"
+    ],
+    "properties": {
+        "environment": {
+            "type": "object",
+            "properties": {
+                "module_id": {"type": "string"},
+                "agent_task_id": {"type": "string"},
+                "mail_server_uuid": {"type": "string"},
+                "python_path": {"type": "string"}
+            }
+        },
+        "redis_discovery": {
+            "type": "object",
+            "properties": {
+                "redis_connection": {"type": "boolean"},
+                "mail_modules": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "key": {"type": "string"},
+                            "module_id": {"type": "string"},
+                            "service_info": {"type": "object"}
+                        }
+                    }
+                },
+                "service_providers": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "module_id": {"type": "string"},
+                            "host": {"type": "string"},
+                            "port": {"type": ["string", "integer"]},
+                            "ui_name": {"type": "string"},
+                            "user_domain": {"type": "string"}
+                        }
+                    }
+                },
+                "redis_keys": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                }
+            }
+        },
+        "agent_tasks": {
+            "type": "object",
+            "properties": {
+                "available": {"type": "boolean"},
+                "module_path": {"type": "string"},
+                "error": {"type": "string"}
+            }
+        },
+        "mail_module_call": {
+            "type": "object",
+            "properties": {
+                "attempted": {"type": "boolean"},
+                "success": {"type": "boolean"},
+                "module_id": {"type": "string"},
+                "result_type": {"type": "string"},
+                "result_keys": {"type": ["array", "string"]},
+                "domains_count": {"type": ["integer", "string"]},
+                "error": {"type": "string"},
+                "reason": {"type": "string"}
+            }
+        },
+        "summary": {
+            "type": "object",
+            "required": [
+                "redis_connection",
+                "agent_tasks_available",
+                "mail_module_callable",
+                "integration_ready",
+                "mail_modules_found",
+                "service_providers_found"
+            ],
+            "properties": {
+                "redis_connection": {"type": "boolean"},
+                "agent_tasks_available": {"type": "boolean"},
+                "mail_module_callable": {"type": "boolean"},
+                "integration_ready": {"type": "boolean"},
+                "mail_modules_found": {"type": "integer"},
+                "service_providers_found": {"type": "integer"}
+            }
+        }
+    }
+}

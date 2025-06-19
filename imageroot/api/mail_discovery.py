@@ -1,156 +1,194 @@
 #!/usr/bin/env python3
 """
-Mail Server Discovery Service
-Discovers NS8 mail server instances via Redis service discovery
+NS8 Mail Server Discovery Service
+Discovers and integrates with NS8 mail modules using agent and Redis
 """
 
-import redis
-import json
 import logging
+import json
 import os
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional, Any
+import agent
+import agent.tasks
 
 logger = logging.getLogger(__name__)
 
 class MailServerDiscovery:
-    """Discover and manage connections to NS8 mail servers"""
+    """Discover and manage NS8 mail server integrations"""
     
-    def __init__(self, redis_host='127.0.0.1', redis_port=6379):
-        self.redis_host = redis_host
-        self.redis_port = redis_port
-        self.redis_client = None
-    
-    def connect_redis(self):
-        """Connect to Redis for service discovery"""
-        try:
-            self.redis_client = redis.Redis(
-                host=self.redis_host, 
-                port=self.redis_port, 
-                decode_responses=True,
-                socket_timeout=5
-            )
-            # Test connection
-            self.redis_client.ping()
-            logger.info("Connected to Redis for service discovery")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to connect to Redis: {e}")
-            self.redis_client = None
-            return False
-    
-    def discover_mail_servers(self) -> List[Dict]:
-        """Discover available NS8 mail server instances"""
-        if not self.redis_client:
-            if not self.connect_redis():
-                return []
+    def __init__(self):
+        self.cache = {}
+        self.cache_timeout = 300  # 5 minutes
         
-        mail_servers = []
-        
+    def discover_mail_servers(self) -> List[Dict[str, Any]]:
+        """Discover available NS8 mail servers using agent service discovery"""
         try:
-            # Find IMAP service endpoints - NS8 pattern: module/mail[1-9]*/srv/tcp/imap
-            imap_keys = self.redis_client.keys('module/mail[1-9]*/srv/tcp/imap')
+            mail_servers = []
             
-            for key in imap_keys:
+            # Use NS8 agent to discover mail service providers
+            mail_providers = agent.list_service_providers(
+                service='imap',  # Look for IMAP services (mail modules)
+                transport='tcp'
+            )
+            
+            for provider in mail_providers:
                 try:
-                    # Extract module ID from key (e.g., mail1, mail2)
-                    parts = key.split('/')
-                    module_id = parts[1]  # mail1, mail2, etc.
-                    
-                    # Get service information
-                    service_info = self.redis_client.hgetall(key)
-                    
-                    if service_info:
-                        # Also look for submission service for completeness
-                        submission_key = f"module/{module_id}/srv/tcp/submission"
-                        submission_info = self.redis_client.hgetall(submission_key)
-                        
-                        mail_server = {
+                    module_id = provider.get('module_id', '')
+                    if module_id.startswith('mail'):
+                        server_info = {
                             'module_id': module_id,
-                            'uuid': service_info.get('uuid', ''),
-                            'host': service_info.get('host', ''),
-                            'imap_port': int(service_info.get('port', 143)),
-                            'submission_port': int(submission_info.get('port', 587)) if submission_info else 587,
-                            'node': service_info.get('node', ''),
-                            'user_domain': service_info.get('user_domain', ''),
-                            'status': 'available'
+                            'host': provider.get('host', 'localhost'),
+                            'port': provider.get('port', 143),
+                            'service_type': 'ns8-mail',
+                            'available': True,
+                            'integration_method': 'agent_tasks'
                         }
+                        mail_servers.append(server_info)
                         
-                        # Validate required fields
-                        if mail_server['host'] and mail_server['uuid']:
-                            mail_servers.append(mail_server)
-                            logger.info(f"Discovered mail server: {module_id} at {mail_server['host']}")
-                        else:
-                            logger.warning(f"Incomplete mail server info for {module_id}")
-                            
                 except Exception as e:
-                    logger.error(f"Error processing mail server key {key}: {e}")
+                    logger.error(f"Error processing mail provider {provider}: {e}")
                     continue
-                    
+            
+            if not mail_servers:
+                logger.warning("No NS8 mail modules found via service discovery")
+                
+            return mail_servers
+            
         except Exception as e:
             logger.error(f"Error discovering mail servers: {e}")
-        
-        logger.info(f"Discovered {len(mail_servers)} mail servers")
-        return mail_servers
+            return []
     
-    def get_mail_server_by_uuid(self, uuid: str) -> Optional[Dict]:
-        """Get specific mail server by UUID"""
-        servers = self.discover_mail_servers()
-        for server in servers:
-            if server['uuid'] == uuid:
-                return server
-        return None
-    
-    def validate_mail_server_connection(self, server_info: Dict) -> bool:
-        """Validate that we can connect to a mail server"""
+    def get_mail_server_by_id(self, module_id: str) -> Optional[Dict[str, Any]]:
+        """Get specific mail server by module ID"""
         try:
-            import socket
+            mail_servers = self.discover_mail_servers()
+            for server in mail_servers:
+                if server.get('module_id') == module_id:
+                    return server
+            return None
             
-            # Test IMAP connection
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(5)
-            result = sock.connect_ex((server_info['host'], server_info['imap_port']))
-            sock.close()
+        except Exception as e:
+            logger.error(f"Error getting mail server {module_id}: {e}")
+            return None
+    
+    def get_email_addresses(self, module_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get available email addresses from NS8 mail module"""
+        try:
+            if not module_id:
+                # Find first available mail module
+                mail_servers = self.discover_mail_servers()
+                if not mail_servers:
+                    logger.error("No NS8 mail modules found")
+                    return []
+                module_id = mail_servers[0]['module_id']
             
-            if result == 0:
-                logger.info(f"Mail server {server_info['module_id']} is reachable")
-                return True
-            else:
-                logger.warning(f"Mail server {server_info['module_id']} is not reachable")
-                return False
+            # Call NS8 mail module to get email addresses
+            try:
+                result = agent.tasks.run(
+                    agent_id=f'{module_id}@node',
+                    action='list-addresses',
+                    data={}
+                )
+                
+                if result.get('exit_code', 0) == 0:
+                    addresses_data = json.loads(result.get('output', '{}'))
+                    return addresses_data.get('addresses', [])
+                else:
+                    logger.error(f"Failed to get addresses from {module_id}: {result.get('error', 'Unknown error')}")
+                    return []
+                    
+            except Exception as e:
+                logger.error(f"Error calling mail module {module_id}: {e}")
+                return []
                 
         except Exception as e:
-            logger.error(f"Error validating mail server connection: {e}")
-            return False
+            logger.error(f"Error getting email addresses: {e}")
+            return []
+    
+    def get_user_mailboxes(self, module_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get available user mailboxes from NS8 mail module"""
+        try:
+            if not module_id:
+                # Find first available mail module
+                mail_servers = self.discover_mail_servers()
+                if not mail_servers:
+                    logger.error("No NS8 mail modules found")
+                    return []
+                module_id = mail_servers[0]['module_id']
+            
+            # Call NS8 mail module to get user mailboxes
+            try:
+                result = agent.tasks.run(
+                    agent_id=f'{module_id}@node',
+                    action='list-user-mailboxes',
+                    data={}
+                )
+                
+                if result.get('exit_code', 0) == 0:
+                    mailboxes_data = json.loads(result.get('output', '{}'))
+                    return mailboxes_data.get('mailboxes', [])
+                else:
+                    logger.error(f"Failed to get mailboxes from {module_id}: {result.get('error', 'Unknown error')}")
+                    return []
+                    
+            except Exception as e:
+                logger.error(f"Error calling mail module {module_id}: {e}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Error getting user mailboxes: {e}")
+            return []
+    
+    def test_mail_integration(self, module_id: Optional[str] = None) -> Dict[str, Any]:
+        """Test integration with NS8 mail module"""
+        try:
+            result = {
+                'success': False,
+                'module_id': module_id,
+                'mail_servers_found': 0,
+                'addresses_found': 0,
+                'mailboxes_found': 0,
+                'errors': []
+            }
+            
+            # Discover mail servers
+            mail_servers = self.discover_mail_servers()
+            result['mail_servers_found'] = len(mail_servers)
+            
+            if not mail_servers:
+                result['errors'].append('No NS8 mail modules found')
+                return result
+            
+            # Use specified module or first available
+            target_module = module_id
+            if not target_module:
+                target_module = mail_servers[0]['module_id']
+            
+            result['module_id'] = target_module
+            
+            # Test email addresses
+            addresses = self.get_email_addresses(target_module)
+            result['addresses_found'] = len(addresses)
+            
+            # Test mailboxes
+            mailboxes = self.get_user_mailboxes(target_module)
+            result['mailboxes_found'] = len(mailboxes)
+            
+            # Success if we found addresses or mailboxes
+            result['success'] = (result['addresses_found'] > 0 or result['mailboxes_found'] > 0)
+            
+            if not result['success']:
+                result['errors'].append('No email addresses or mailboxes found')
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error testing mail integration: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'errors': [str(e)]
+            }
 
 # Global instance
 mail_discovery = MailServerDiscovery()
-
-def get_available_mail_servers() -> List[Dict]:
-    """Get list of available mail servers"""
-    return mail_discovery.discover_mail_servers()
-
-def get_mail_server_by_uuid(uuid: str) -> Optional[Dict]:
-    """Get mail server by UUID"""
-    return mail_discovery.get_mail_server_by_uuid(uuid)
-
-def validate_mail_server(uuid: str) -> bool:
-    """Validate mail server connection"""
-    server = get_mail_server_by_uuid(uuid)
-    if server:
-        return mail_discovery.validate_mail_server_connection(server)
-    return False
-
-if __name__ == "__main__":
-    # Test script
-    logging.basicConfig(level=logging.INFO)
-    
-    print("Discovering mail servers...")
-    servers = get_available_mail_servers()
-    
-    print(f"\nFound {len(servers)} mail servers:")
-    for server in servers:
-        print(f"  {server['module_id']}: {server['host']}:{server['imap_port']} (UUID: {server['uuid'][:8]}...)")
-        if validate_mail_server(server['uuid']):
-            print(f"    ✓ Connection OK")
-        else:
-            print(f"    ✗ Connection failed")

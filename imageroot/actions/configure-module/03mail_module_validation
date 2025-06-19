@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import os
+import agent
+
+agent.set_weight(os.path.basename(__file__), 0) # Validation step, no task progress at all
+
+try:
+    # This module requires NS8 mail module to be available
+    # No external mail servers or fallback mechanisms are supported
+    
+    # Check if any NS8 mail modules are available
+    mail_providers = agent.list_service_providers(
+        service='mail',
+        transport='tcp',
+        filter_data={'node_id': os.environ.get('NODE_ID', '1')}
+    )
+    
+    if not mail_providers:
+        # No NS8 mail modules found - this is a fatal error
+        agent.set_status('validation-failed')
+        json.dump([{
+            'field': 'mail_integration',
+            'parameter': 'mail_integration',
+            'value': '',
+            'error': 'ns8_mail_module_required'
+        }], fp=sys.stdout)
+        sys.exit(3)
+    
+    # Log successful mail module discovery
+    agent.log_info(f"Found {len(mail_providers)} NS8 mail module(s): {[p['module_id'] for p in mail_providers]}")
+    
+except Exception as e:
+    # Any exception in mail module discovery is treated as validation failure
+    agent.set_status('validation-failed')
+    json.dump([{
+        'field': 'mail_integration',
+        'parameter': 'mail_integration', 
+        'value': '',
+        'error': f'mail_module_discovery_failed: {str(e)}'
+    }], fp=sys.stdout)
+    sys.exit(3)
