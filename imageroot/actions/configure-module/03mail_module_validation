@@ -50,10 +50,9 @@ try:
             'value': '',
             'error': 'ns8_mail_module_required'
         }], fp=sys.stdout)
-        sys.exit(3)
-    
+        sys.exit(3)    
     # Log successful mail module discovery
-    agent.log_info(f"Found {len(mail_providers)} NS8 mail module(s): {[p.get('module_id', 'unknown') for p in mail_providers]}")
+    print(agent.SD_INFO + f"Found {len(mail_providers)} NS8 mail module(s): {[p.get('module_id', 'unknown') for p in mail_providers]}", file=sys.stderr)
     
 except Exception as e:
     # Any exception in mail module discovery is treated as validation failure
