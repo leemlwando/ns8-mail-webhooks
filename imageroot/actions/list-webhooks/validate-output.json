@@ -40,18 +40,52 @@
                 "format": "date-time",
                 "description": "Webhook creation timestamp"
             },
-            "last_triggered": {
+            "is_realtime": {
+                "type": "boolean",
+                "description": "Whether webhook monitors emails in real-time"
+            },
+            "schedule_type": {
                 "type": "string",
+                "enum": ["hours", "custom"],
+                "description": "Type of schedule interval for non-realtime webhooks"
+            },
+            "schedule_hours": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 24,
+                "description": "Interval in hours for scheduled webhooks"
+            },
+            "schedule_custom": {
+                "type": "string",
+                "description": "Custom interval specification"
+            },
+            "last_triggered": {
+                "type": ["string", "null"],
                 "format": "date-time",
                 "description": "Last webhook trigger timestamp"
+            },
+            "last_run": {
+                "type": ["string", "null"],
+                "format": "date-time",
+                "description": "Last webhook run timestamp"
+            },
+            "next_run": {
+                "type": ["string", "null"],
+                "format": "date-time",
+                "description": "Next scheduled webhook run timestamp"
             },
             "trigger_count": {
                 "type": "integer",
                 "minimum": 0,
                 "description": "Number of times webhook has been triggered"
+            },
+            "run_count": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of times webhook has been run"
             }
         },
-        "required": ["id", "email", "url", "enabled", "post_action", "payload_type", "created_at"],
+        "required": ["id", "email", "url", "enabled", "post_action", "payload_type", "created_at", "is_realtime", "schedule_type", "schedule_hours", "schedule_custom", "trigger_count", "run_count"],
         "additionalProperties": false
     }
 }

@@ -99,7 +99,7 @@
               <cv-column :md="4" v-if="webhookData.schedule_type === 'hours'">
                 <cv-dropdown
                   :label="$t('webhooks.interval')"
-                  v-model="webhookData.schedule_hours"
+                  v-model.number="webhookData.schedule_hours"
                   :disabled="loading.saveWebhook"
                   :invalid-message="error.schedule_hours"
                   :light="true"
@@ -316,7 +316,7 @@ export default {
           enabled: this.webhook.enabled,
           is_realtime: this.webhook.is_realtime !== undefined ? this.webhook.is_realtime : true,
           schedule_type: this.webhook.schedule_type || "hours",
-          schedule_hours: this.webhook.schedule_hours || 1,
+          schedule_hours: parseInt(this.webhook.schedule_hours) || 1,
           schedule_custom: this.webhook.schedule_custom || "",
           post_action: this.webhook.post_action,
           payload_type: this.webhook.payload_type,
@@ -335,6 +335,9 @@ export default {
           payload_type: "json",
         };
       }
+      
+      // Reset computed interval when loading data
+      this.computedInterval = null;
     },
     validateWebhookData() {
       this.clearErrors();

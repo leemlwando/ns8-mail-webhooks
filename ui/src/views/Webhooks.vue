@@ -66,9 +66,7 @@
             :errorTitle="$t('action.list-webhooks')"
             :errorDescription="error.listWebhooks"
             :itemsPerPageLabel="core.$t('pagination.items_per_page')"
-            :rangeOfTotalItemsLabel="
-              core.$t('pagination.range_of_total_items')
-            "
+            :rangeOfTotalItemsLabel="core.$t('pagination.range_of_total_items')"
             :ofTotalPagesLabel="core.$t('pagination.of_total_pages')"
             :backwardText="core.$t('pagination.previous_page')"
             :forwardText="core.$t('pagination.next_page')"
@@ -90,13 +88,17 @@
                 :value="`${rowIndex}`"
                 class="table-row"
               >
-                <cv-data-table-cell :title="$t('webhooks.toggle_status')">
+                <cv-data-table-cell :title="$t('webhooks.toggle_status')" class="toggle-cell">
                   <cv-toggle
                     :value="row.enabled"
                     @change="(newValue) => toggleWebhook(row, newValue)"
                     :disabled="loading.toggleWebhook"
                     size="sm"
-                    :title="row.enabled ? $t('webhooks.click_to_disable') : $t('webhooks.click_to_enable')"
+                    :title="
+                      row.enabled
+                        ? $t('webhooks.click_to_disable')
+                        : $t('webhooks.click_to_enable')
+                    "
                   >
                     <template slot="text-left">{{
                       $t("webhooks.disabled")
@@ -121,19 +123,33 @@
                     {{ truncateUrl(row.url) }}
                   </NsButton>
                 </cv-data-table-cell>
-                <cv-data-table-cell :title="$t(`webhooks.post_action_${row.post_action}_description`)">
+                <cv-data-table-cell
+                  :title="
+                    $t(`webhooks.post_action_${row.post_action}_description`)
+                  "
+                >
                   <cv-tag
                     :kind="getPostActionKind(row.post_action)"
                     :label="$t(`webhooks.post_action_${row.post_action}`)"
                   ></cv-tag>
                 </cv-data-table-cell>
-                <cv-data-table-cell :title="$t(`webhooks.payload_type_${row.payload_type}_description`)">
+                <cv-data-table-cell
+                  :title="
+                    $t(`webhooks.payload_type_${row.payload_type}_description`)
+                  "
+                >
                   <cv-tag
                     :kind="row.payload_type === 'json' ? 'blue' : 'purple'"
                     :label="row.payload_type.toUpperCase()"
                   ></cv-tag>
                 </cv-data-table-cell>
-                <cv-data-table-cell :title="row.last_run ? formatDate(row.last_run) : $t('webhooks.never_run')">
+                <cv-data-table-cell
+                  :title="
+                    row.last_run
+                      ? formatDate(row.last_run)
+                      : $t('webhooks.never_run')
+                  "
+                >
                   <span v-if="row.last_run">
                     {{ formatDate(row.last_run) }}
                   </span>
@@ -143,7 +159,11 @@
                 </cv-data-table-cell>
                 <cv-data-table-cell :title="getNextRunTitle(row)">
                   <span v-if="row.is_realtime">
-                    <cv-tag kind="green" :label="$t('webhooks.realtime')" size="sm"></cv-tag>
+                    <cv-tag
+                      kind="green"
+                      :label="$t('webhooks.realtime')"
+                      size="sm"
+                    ></cv-tag>
                   </span>
                   <span v-else-if="row.next_run && row.enabled">
                     {{ formatDate(row.next_run) }}
@@ -155,7 +175,13 @@
                     {{ $t("webhooks.not_scheduled") }}
                   </span>
                 </cv-data-table-cell>
-                <cv-data-table-cell :title="$t('webhooks.run_count_description', { count: row.run_count || 0 })">
+                <cv-data-table-cell
+                  :title="
+                    $t('webhooks.run_count_description', {
+                      count: row.run_count || 0,
+                    })
+                  "
+                >
                   {{ row.run_count || 0 }}
                 </cv-data-table-cell>
                 <cv-data-table-cell class="table-overflow-menu-cell">
@@ -280,13 +306,13 @@ export default {
       return [
         "enabled",
         "email",
-        "url", 
+        "url",
         "post_action",
         "payload_type",
         "last_run",
         "next_run",
         "run_count",
-        "menu"
+        "menu",
       ];
     },
     i18nTableColumns() {
@@ -572,17 +598,6 @@ export default {
       }
       return url;
     },
-    getNextRunTitle(row) {
-      if (row.is_realtime) {
-        return this.$t('webhooks.realtime_description');
-      } else if (row.next_run && row.enabled) {
-        return this.$t('webhooks.next_run_at', { time: this.formatDate(row.next_run) });
-      } else if (!row.enabled) {
-        return this.$t('webhooks.webhook_disabled');
-      } else {
-        return this.$t('webhooks.not_scheduled_description');
-      }
-    },
     openUrl(url) {
       window.open(url, "_blank");
     },
@@ -604,13 +619,15 @@ export default {
     },
     getNextRunTitle(row) {
       if (row.is_realtime) {
-        return this.$t('webhooks.realtime_description');
+        return this.$t("webhooks.realtime_description");
       } else if (row.next_run && row.enabled) {
-        return this.$t('webhooks.next_run_at', { time: this.formatDate(row.next_run) });
+        return this.$t("webhooks.next_run_at", {
+          time: this.formatDate(row.next_run),
+        });
       } else if (!row.enabled) {
-        return this.$t('webhooks.webhook_disabled');
+        return this.$t("webhooks.webhook_disabled");
       } else {
-        return this.$t('webhooks.not_scheduled_description');
+        return this.$t("webhooks.not_scheduled_description");
       }
     },
   },
@@ -645,5 +662,20 @@ export default {
 
 .custom-interval-result {
   margin-top: 0.25rem;
+}
+
+.toggle-cell {
+  padding: 0.75rem 1rem;
+  min-width: 120px;
+  width: 120px;
+}
+
+.toggle-cell .bx--toggle {
+  margin: 0;
+  vertical-align: middle;
+}
+
+.toggle-cell .bx--toggle__switch {
+  margin-right: 0.5rem;
 }
 </style>

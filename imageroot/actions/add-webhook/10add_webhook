@@ -20,11 +20,18 @@ new_webhook = {
     "email": input_data["email"],
     "url": input_data["url"],
     "enabled": input_data.get("enabled", True),
+    "is_realtime": input_data.get("is_realtime", True),
+    "schedule_type": input_data.get("schedule_type", "hours"),
+    "schedule_hours": input_data.get("schedule_hours", 1),
+    "schedule_custom": input_data.get("schedule_custom", ""),
     "post_action": input_data.get("post_action", "none"),
     "payload_type": input_data.get("payload_type", "json"),
     "created_at": datetime.utcnow().isoformat() + "Z",
     "last_triggered": None,
-    "trigger_count": 0
+    "last_run": None,
+    "next_run": None,
+    "trigger_count": 0,
+    "run_count": 0
 }
 
 # TODO: Save to database

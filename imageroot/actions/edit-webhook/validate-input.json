@@ -23,6 +23,25 @@
             "type": "boolean",
             "description": "Whether webhook is active"
         },
+        "is_realtime": {
+            "type": "boolean",
+            "description": "Whether webhook monitors emails in real-time"
+        },
+        "schedule_type": {
+            "type": "string",
+            "enum": ["hours", "custom"],
+            "description": "Type of schedule interval for non-realtime webhooks"
+        },
+        "schedule_hours": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 24,
+            "description": "Interval in hours for scheduled webhooks"
+        },
+        "schedule_custom": {
+            "type": "string",
+            "description": "Custom interval specification (seconds, math expression, or time format)"
+        },
         "post_action": {
             "type": "string",
             "enum": ["none", "mark_as_read", "delete"],
