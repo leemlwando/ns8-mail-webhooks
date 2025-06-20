@@ -69,6 +69,70 @@
           <template slot="text-right">{{ $t("webhooks.enabled") }}</template>
         </cv-toggle>
 
+        <cv-checkbox
+          :checked="webhookData.is_realtime"
+          @change="webhookData.is_realtime = $event"
+          :disabled="loading.saveWebhook"
+          :label="$t('webhooks.realtime_monitoring')"
+          class="mg-bottom-md"
+        ></cv-checkbox>
+
+          <cv-grid v-if="!webhookData.is_realtime" class="no-padding mg-bottom-md">
+            <cv-row>
+              <cv-column :md="4">
+                <cv-dropdown
+                  :label="$t('webhooks.schedule')"
+                  v-model="webhookData.schedule_type"
+                  :disabled="loading.saveWebhook"
+                  :invalid-message="error.schedule_type"
+                  :light="true"
+                >
+                  <cv-dropdown-item
+                    v-for="option in scheduleTypeOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.name }}
+                  </cv-dropdown-item>
+                </cv-dropdown>
+              </cv-column>
+              <cv-column :md="4" v-if="webhookData.schedule_type === 'hours'">
+                <cv-dropdown
+                  :label="$t('webhooks.interval')"
+                  v-model="webhookData.schedule_hours"
+                  :disabled="loading.saveWebhook"
+                  :invalid-message="error.schedule_hours"
+                  :light="true"
+                >
+                  <cv-dropdown-item
+                    v-for="hour in hourOptions"
+                    :key="hour"
+                    :value="hour"
+                  >
+                    {{ $t('webhooks.every_hours', { count: hour }) }}
+                  </cv-dropdown-item>
+                </cv-dropdown>
+              </cv-column>
+              <cv-column :md="4" v-if="webhookData.schedule_type === 'custom'">
+                <cv-text-input
+                  :label="$t('webhooks.custom_interval')"
+                  v-model="webhookData.schedule_custom"
+                  :placeholder="$t('webhooks.custom_interval_placeholder')"
+                  :disabled="loading.saveWebhook"
+                  :invalid-message="error.schedule_custom"
+                  :helper-text="$t('webhooks.custom_interval_help')"
+                  @input="computeCustomInterval"
+                  ref="schedule_custom"
+                ></cv-text-input>
+                <div v-if="computedInterval" class="custom-interval-result">
+                  <small class="text-muted">
+                    {{ $t('webhooks.computed_interval', { seconds: computedInterval }) }}
+                  </small>
+                </div>
+              </cv-column>
+            </cv-row>
+          </cv-grid>
+
         <cv-dropdown
           :label="$t('webhooks.post_action')"
           v-model="webhookData.post_action"
@@ -148,10 +212,15 @@ export default {
         email: "",
         url: "",
         enabled: true,
+        is_realtime: true,
+        schedule_type: "hours",
+        schedule_hours: 1,
+        schedule_custom: "",
         post_action: "none",
         payload_type: "json",
       },
       emailAddresses: [],
+      computedInterval: null,
       loading: {
         saveWebhook: false,
         getEmailAddresses: false,
@@ -162,6 +231,9 @@ export default {
         url: "",
         post_action: "",
         payload_type: "",
+        schedule_type: "",
+        schedule_hours: "",
+        schedule_custom: "",
         getEmailAddresses: "",
       },
     };
@@ -196,6 +268,21 @@ export default {
         },
       ];
     },
+    scheduleTypeOptions() {
+      return [
+        {
+          name: this.$t("webhooks.schedule_type_hours"),
+          value: "hours",
+        },
+        {
+          name: this.$t("webhooks.schedule_type_custom"),
+          value: "custom",
+        },
+      ];
+    },
+    hourOptions() {
+      return Array.from({ length: 24 }, (_, i) => i + 1);
+    },
   },
   watch: {
     webhook: {
@@ -227,6 +314,10 @@ export default {
           email: this.webhook.email,
           url: this.webhook.url,
           enabled: this.webhook.enabled,
+          is_realtime: this.webhook.is_realtime !== undefined ? this.webhook.is_realtime : true,
+          schedule_type: this.webhook.schedule_type || "hours",
+          schedule_hours: this.webhook.schedule_hours || 1,
+          schedule_custom: this.webhook.schedule_custom || "",
           post_action: this.webhook.post_action,
           payload_type: this.webhook.payload_type,
         };
@@ -236,6 +327,10 @@ export default {
           email: "",
           url: "",
           enabled: true,
+          is_realtime: true,
+          schedule_type: "hours",
+          schedule_hours: 1,
+          schedule_custom: "",
           post_action: "none",
           payload_type: "json",
         };
@@ -261,6 +356,29 @@ export default {
       } else if (!this.isValidUrl(this.webhookData.url)) {
         this.error.url = this.$t("error.invalid_url");
         isValidationOk = false;
+      }
+
+      // Validate schedule settings for non-realtime webhooks
+      if (!this.webhookData.is_realtime) {
+        if (!this.webhookData.schedule_type) {
+          this.error.schedule_type = this.$t("common.required");
+          isValidationOk = false;
+        }
+
+        if (this.webhookData.schedule_type === "hours") {
+          if (!this.webhookData.schedule_hours || this.webhookData.schedule_hours < 1 || this.webhookData.schedule_hours > 24) {
+            this.error.schedule_hours = this.$t("webhooks.error.invalid_hours");
+            isValidationOk = false;
+          }
+        } else if (this.webhookData.schedule_type === "custom") {
+          if (!this.webhookData.schedule_custom) {
+            this.error.schedule_custom = this.$t("common.required");
+            isValidationOk = false;
+          } else if (!this.isValidCustomInterval(this.webhookData.schedule_custom)) {
+            this.error.schedule_custom = this.$t("webhooks.error.invalid_custom_interval");
+            isValidationOk = false;
+          }
+        }
       }
 
       // Validate post_action
@@ -289,12 +407,77 @@ export default {
         return false;
       }
     },
+    isValidCustomInterval(interval) {
+      try {
+        // Try to evaluate as math expression first
+        const computed = this.evaluateMathExpression(interval);
+        if (computed !== null) {
+          return computed >= 60; // Minimum 1 minute
+        }
+        
+        // Accept number format (seconds)
+        if (/^\d+$/.test(interval)) {
+          const seconds = parseInt(interval);
+          return seconds >= 60; // Minimum 1 minute
+        }
+        
+        // Accept HH:MM:SS or MM:SS format
+        const timeRegex = /^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/;
+        const match = interval.match(timeRegex);
+        if (match) {
+          const hours = parseInt(match[1]) || 0;
+          const minutes = parseInt(match[2]);
+          const seconds = parseInt(match[3]) || 0;
+          
+          // Validate ranges
+          if (minutes >= 60 || seconds >= 60) return false;
+          
+          // Calculate total seconds
+          const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+          return totalSeconds >= 60; // Minimum 1 minute
+        }
+        
+        return false;
+      } catch (e) {
+        return false;
+      }
+    },
+    evaluateMathExpression(expression) {
+      try {
+        // Only allow numbers, +, -, *, /, (, ), and whitespace
+        if (!/^[\d+\-*/\s().]+$/.test(expression)) {
+          return null;
+        }
+        
+        // Use Function constructor to safely evaluate math expressions
+        const result = new Function('return ' + expression)();
+        
+        if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+          return Math.floor(result);
+        }
+        
+        return null;
+      } catch (e) {
+        return null;
+      }
+    },
+    computeCustomInterval() {
+      if (this.webhookData.schedule_custom) {
+        const computed = this.evaluateMathExpression(this.webhookData.schedule_custom);
+        this.computedInterval = computed;
+      } else {
+        this.computedInterval = null;
+      }
+    },
     clearErrors() {
       this.error.saveWebhook = "";
       this.error.email = "";
       this.error.url = "";
       this.error.post_action = "";
       this.error.payload_type = "";
+      this.error.schedule_type = "";
+      this.error.schedule_hours = "";
+      this.error.schedule_custom = "";
       this.error.getEmailAddresses = "";
     },
     async getEmailAddresses() {

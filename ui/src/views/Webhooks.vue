@@ -54,7 +54,7 @@
             :pageSizes="[10, 25, 50, 100]"
             :overflow-menu="true"
             isSearchable
-            :searchPlaceholder="$t('common.search')"
+            :searchPlaceholder="$t('webhooks.search_webhook')"
             :searchClearLabel="core.$t('common.clear_search')"
             :noSearchResultsLabel="core.$t('common.no_search_results')"
             :noSearchResultsDescription="
@@ -73,6 +73,7 @@
             :backwardText="core.$t('pagination.previous_page')"
             :forwardText="core.$t('pagination.next_page')"
             :pageNumberLabel="core.$t('pagination.page_number')"
+            :label="$t('webhooks.webhooks_table_label')"
             @updatePage="tablePage = $event"
           >
             <template slot="empty-state">
@@ -89,21 +90,6 @@
                 :value="`${rowIndex}`"
                 class="table-row"
               >
-                <cv-data-table-cell :title="row.email">
-                  {{ row.email }}
-                </cv-data-table-cell>
-                <cv-data-table-cell class="url-cell" :title="row.url">
-                  <NsButton
-                    kind="ghost"
-                    size="sm"
-                    :icon="Launch20"
-                    @click="openUrl(row.url)"
-                    class="url-button"
-                    :title="$t('webhooks.open_url', { url: row.url })"
-                  >
-                    {{ truncateUrl(row.url) }}
-                  </NsButton>
-                </cv-data-table-cell>
                 <cv-data-table-cell :title="$t('webhooks.toggle_status')">
                   <cv-toggle
                     :value="row.enabled"
@@ -120,6 +106,21 @@
                     }}</template>
                   </cv-toggle>
                 </cv-data-table-cell>
+                <cv-data-table-cell :title="row.email">
+                  {{ row.email }}
+                </cv-data-table-cell>
+                <cv-data-table-cell class="url-cell" :title="row.url">
+                  <NsButton
+                    kind="ghost"
+                    size="sm"
+                    :icon="Launch20"
+                    @click="openUrl(row.url)"
+                    class="url-button"
+                    :title="$t('webhooks.open_url', { url: row.url })"
+                  >
+                    {{ truncateUrl(row.url) }}
+                  </NsButton>
+                </cv-data-table-cell>
                 <cv-data-table-cell :title="$t(`webhooks.post_action_${row.post_action}_description`)">
                   <cv-tag
                     :kind="getPostActionKind(row.post_action)"
@@ -132,16 +133,30 @@
                     :label="row.payload_type.toUpperCase()"
                   ></cv-tag>
                 </cv-data-table-cell>
-                <cv-data-table-cell :title="$t('webhooks.trigger_count_description', { count: row.trigger_count })">
-                  {{ row.trigger_count }}
-                </cv-data-table-cell>
-                <cv-data-table-cell :title="row.last_triggered ? formatDate(row.last_triggered) : $t('webhooks.never_triggered')">
-                  <span v-if="row.last_triggered">
-                    {{ formatDate(row.last_triggered) }}
+                <cv-data-table-cell :title="row.last_run ? formatDate(row.last_run) : $t('webhooks.never_run')">
+                  <span v-if="row.last_run">
+                    {{ formatDate(row.last_run) }}
                   </span>
                   <span v-else class="text-muted">
-                    {{ $t("webhooks.never_triggered") }}
+                    {{ $t("webhooks.never_run") }}
                   </span>
+                </cv-data-table-cell>
+                <cv-data-table-cell :title="getNextRunTitle(row)">
+                  <span v-if="row.is_realtime">
+                    <cv-tag kind="green" :label="$t('webhooks.realtime')" size="sm"></cv-tag>
+                  </span>
+                  <span v-else-if="row.next_run && row.enabled">
+                    {{ formatDate(row.next_run) }}
+                  </span>
+                  <span v-else-if="!row.enabled" class="text-muted">
+                    {{ $t("webhooks.disabled") }}
+                  </span>
+                  <span v-else class="text-muted">
+                    {{ $t("webhooks.not_scheduled") }}
+                  </span>
+                </cv-data-table-cell>
+                <cv-data-table-cell :title="$t('webhooks.run_count_description', { count: row.run_count || 0 })">
+                  {{ row.run_count || 0 }}
                 </cv-data-table-cell>
                 <cv-data-table-cell class="table-overflow-menu-cell">
                   <div class="action-buttons">
@@ -263,59 +278,21 @@ export default {
     ...mapState(["instanceName", "core", "appName"]),
     tableColumns() {
       return [
+        "enabled",
         "email",
         "url", 
-        "enabled",
         "post_action",
         "payload_type",
-        "trigger_count",
-        "last_triggered",
+        "last_run",
+        "next_run",
+        "run_count",
         "menu"
       ];
     },
     i18nTableColumns() {
-      return [
-        {
-          key: "email",
-          header: this.$t("webhooks.email"),
-          sortable: true,
-        },
-        {
-          key: "url",
-          header: this.$t("webhooks.url"),
-          sortable: true,
-        },
-        {
-          key: "enabled",
-          header: this.$t("webhooks.status"),
-          sortable: true,
-        },
-        {
-          key: "post_action",
-          header: this.$t("webhooks.post_action"),
-          sortable: true,
-        },
-        {
-          key: "payload_type",
-          header: this.$t("webhooks.payload_type"),
-          sortable: true,
-        },
-        {
-          key: "trigger_count",
-          header: this.$t("webhooks.trigger_count"),
-          sortable: true,
-        },
-        {
-          key: "last_triggered",
-          header: this.$t("webhooks.last_triggered"),
-          sortable: true,
-        },
-        {
-          key: "menu",
-          header: this.$t("common.actions"),
-          sortable: false,
-        },
-      ];
+      return this.tableColumns.map((column) => {
+        return this.$t("webhooks." + column);
+      });
     },
   },
   beforeRouteEnter(to, from, next) {
@@ -595,6 +572,17 @@ export default {
       }
       return url;
     },
+    getNextRunTitle(row) {
+      if (row.is_realtime) {
+        return this.$t('webhooks.realtime_description');
+      } else if (row.next_run && row.enabled) {
+        return this.$t('webhooks.next_run_at', { time: this.formatDate(row.next_run) });
+      } else if (!row.enabled) {
+        return this.$t('webhooks.webhook_disabled');
+      } else {
+        return this.$t('webhooks.not_scheduled_description');
+      }
+    },
     openUrl(url) {
       window.open(url, "_blank");
     },
@@ -613,6 +601,17 @@ export default {
     formatDate(dateString) {
       const date = new Date(dateString);
       return date.toLocaleString();
+    },
+    getNextRunTitle(row) {
+      if (row.is_realtime) {
+        return this.$t('webhooks.realtime_description');
+      } else if (row.next_run && row.enabled) {
+        return this.$t('webhooks.next_run_at', { time: this.formatDate(row.next_run) });
+      } else if (!row.enabled) {
+        return this.$t('webhooks.webhook_disabled');
+      } else {
+        return this.$t('webhooks.not_scheduled_description');
+      }
     },
   },
 };
@@ -642,5 +641,9 @@ export default {
 .text-muted {
   color: #6f6f6f;
   font-style: italic;
+}
+
+.custom-interval-result {
+  margin-top: 0.25rem;
 }
 </style>
