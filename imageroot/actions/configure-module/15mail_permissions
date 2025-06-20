@@ -1,0 +1,17 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2025 Lee M. Lwando
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+# Add authorization to access mail module actions
+# This grants our module permission to call mail module's list-addresses action
+
+echo "Setting up mail module authorizations..." >&2
+
+# Grant permissions to access mail module actions
+# We need to be able to call list-addresses and get-configuration actions
+redis-exec SADD "${AGENT_ID}/roles/mailadm" "list-addresses" "get-configuration"
+
+echo "Mail module authorizations configured successfully" >&2

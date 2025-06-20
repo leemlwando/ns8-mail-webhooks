@@ -7,16 +7,167 @@
 
 import json
 import sys
+import os
+import agent
 
-# TODO: Replace with actual email addresses from mail system
-# For now, return dummy email addresses
-email_addresses = [
-    "admin@example.com",
-    "user1@example.com", 
-    "user2@example.com",
-    "support@example.com",
-    "info@mydomain.com",
-    "sales@mydomain.com"
-]
+def main():
+    """Fetch email addresses from the mail module using proper NS8 agent communication"""
+    
+    try:
+        # Call the mail module's list-addresses action using agent.tasks.run
+        print(agent.SD_NOTICE + "Starting email address retrieval from mail module", file=sys.stderr)
+        
+        # Find the mail module ID - must be properly configured
+        mail_module_id = find_mail_module()
+        if not mail_module_id:
+            print(agent.SD_ERR + "Mail module is not accessible - check cluster configuration and permissions", file=sys.stderr)
+            json.dump([], fp=sys.stdout)
+            return
+        
+        print(agent.SD_INFO + f"Found mail module: {mail_module_id}", file=sys.stderr)
+        
+        # Call the mail module using agent.tasks.run with proper user context
+        print(agent.SD_DEBUG + f"Calling {mail_module_id}/list-addresses action with current user context", file=sys.stderr)
+        
+        # Use the current user's credentials and context
+        result = agent.tasks.run(
+            agent_id=f"module/{mail_module_id}",
+            action="list-addresses",
+            data={}
+        )
+        
+        print(agent.SD_INFO + "Successfully received response from mail module", file=sys.stderr)
+        print(agent.SD_DEBUG + f"Raw mail module response: {json.dumps(result, indent=2)}", file=sys.stderr)
+        
+        # Extract email addresses from the result (data is in result.output)
+        email_addresses = extract_email_addresses(result.get('output', {}))
+        
+        print(agent.SD_NOTICE + f"Successfully extracted {len(email_addresses)} email addresses", file=sys.stderr)
+        print(agent.SD_DEBUG + f"Final email addresses list: {json.dumps(email_addresses, indent=2)}", file=sys.stderr)
+        
+        # Return the email addresses as JSON
+        json.dump(email_addresses, fp=sys.stdout)
+        
+    except Exception as e:
+        print(agent.SD_ERR + f"Failed to fetch email addresses: {str(e)}", file=sys.stderr)
+        # Return empty list on error - no dummy data
+        json.dump([], fp=sys.stdout)
 
-json.dump(email_addresses, fp=sys.stdout)
+def find_mail_module():
+    """Find the mail module ID in the cluster"""
+    try:
+        print(agent.SD_DEBUG + "Searching for mail module in cluster", file=sys.stderr)
+        
+        # Get the configured mail module ID - default to mail1
+        mail_module_id = os.environ.get('MAIL_MODULE_ID', 'mail1')
+        print(agent.SD_INFO + f"Using configured mail module: {mail_module_id}", file=sys.stderr)
+        
+        # Test if the mail module responds to a simple action
+        print(agent.SD_DEBUG + f"Testing connection to mail module: {mail_module_id}", file=sys.stderr)
+        
+        result = agent.tasks.run(
+            agent_id=f"module/{mail_module_id}",
+            action="get-configuration",
+            data={}
+        )
+        
+        print(agent.SD_INFO + f"Successfully connected to mail module: {mail_module_id}", file=sys.stderr)
+        print(agent.SD_DEBUG + f"Mail module connection test result: {json.dumps(result, indent=2)}", file=sys.stderr)
+        
+        return mail_module_id
+        
+    except Exception as e:
+        print(agent.SD_ERR + f"Failed to connect to mail module '{mail_module_id}': {str(e)}", file=sys.stderr)
+        print(agent.SD_ERR + "Please verify that the mail module is installed and accessible", file=sys.stderr)
+        return None
+
+def extract_email_addresses(result):
+    """Extract email addresses from mail module result"""
+    email_addresses = []
+    
+    if not result:
+        print(agent.SD_WARNING + "No result received from mail module", file=sys.stderr)
+        return []
+    
+    if 'addresses' not in result:
+        print(agent.SD_WARNING + "No 'addresses' key found in mail module response", file=sys.stderr)
+        print(agent.SD_DEBUG + f"Available keys in result: {list(result.keys())}", file=sys.stderr)
+        print(agent.SD_DEBUG + f"Full result structure: {json.dumps(result, indent=2)}", file=sys.stderr)
+        return []
+    
+    addresses_list = result['addresses']
+    if not addresses_list:
+        print(agent.SD_WARNING + "Addresses list is empty", file=sys.stderr)
+        return []
+    
+    # Get domain lists for expansion
+    adduser_domains = result.get('adduser_domains', [])
+    addgroup_domains = result.get('addgroup_domains', [])
+    
+    print(agent.SD_INFO + f"Processing {len(addresses_list)} addresses from mail module", file=sys.stderr)
+    print(agent.SD_DEBUG + f"Available adduser_domains: {json.dumps(adduser_domains, indent=2)}", file=sys.stderr)
+    print(agent.SD_DEBUG + f"Available addgroup_domains: {json.dumps(addgroup_domains, indent=2)}", file=sys.stderr)
+    
+    # Track address types for educational logging
+    type_counts = {'domain': 0, 'wildcard': 0, 'adduser': 0, 'addgroup': 0, 'unknown': 0}
+    
+    for addr in addresses_list:
+        atype = addr.get('atype', 'unknown')
+        local = addr.get('local', '')
+        
+        if not local:
+            print(agent.SD_WARNING + f"Skipping address with empty local part: {json.dumps(addr)}", file=sys.stderr)
+            continue
+            
+        type_counts[atype] = type_counts.get(atype, 0) + 1
+        
+        if atype == 'domain' and 'domain' in addr:
+            email = f"{local}@{addr['domain']}"
+            email_addresses.append(email)
+            print(agent.SD_DEBUG + f"Added domain address: {email} (direct alias/mailbox)", file=sys.stderr)
+            
+        elif atype == 'wildcard':
+            # For webhooks, wildcard addresses might be less useful, but include them
+            email = f"{local}@*"
+            email_addresses.append(email)
+            print(agent.SD_DEBUG + f"Added wildcard address: {email} (catches all domains)", file=sys.stderr)
+            
+        elif atype == 'adduser':
+            # User accounts - expand across all adduser domains
+            if not adduser_domains:
+                print(agent.SD_WARNING + f"Adduser address '{local}' found but no adduser_domains available", file=sys.stderr)
+                continue
+            for domain in adduser_domains:
+                email = f"{local}@{domain}"
+                email_addresses.append(email)
+                print(agent.SD_DEBUG + f"Added adduser address: {email} (user account)", file=sys.stderr)
+                
+        elif atype == 'addgroup':
+            # Group accounts - expand across all addgroup domains  
+            if not addgroup_domains:
+                print(agent.SD_DEBUG + f"Addgroup address '{local}' found but no addgroup_domains available", file=sys.stderr)
+                continue
+            for domain in addgroup_domains:
+                email = f"{local}@{domain}"
+                email_addresses.append(email)
+                print(agent.SD_DEBUG + f"Added addgroup address: {email} (group account)", file=sys.stderr)
+        else:
+            print(agent.SD_WARNING + f"Unknown address type '{atype}' for {local}: {json.dumps(addr)}", file=sys.stderr)
+    
+    # Educational logging about address types found
+    print(agent.SD_INFO + f"Address type breakdown: {json.dumps(type_counts)}", file=sys.stderr)
+    
+    # Remove duplicates and sort
+    unique_addresses = sorted(list(set(email_addresses)))
+    duplicates_removed = len(email_addresses) - len(unique_addresses)
+    
+    if duplicates_removed > 0:
+        print(agent.SD_INFO + f"Removed {duplicates_removed} duplicate addresses during deduplication", file=sys.stderr)
+        print(agent.SD_DEBUG + f"Original count: {len(email_addresses)}, Final count: {len(unique_addresses)}", file=sys.stderr)
+        
+    print(agent.SD_NOTICE + f"Final email list contains {len(unique_addresses)} unique addresses after processing {len(addresses_list)} address records", file=sys.stderr)
+    
+    return unique_addresses
+
+if __name__ == "__main__":
+    main()
