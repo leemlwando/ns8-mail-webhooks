@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: Registry
     steps:
-      - uses: NethServer/ns8-github-actions/.github/actions/delete-image@v1
+      - uses: leemlwando/ns8-github-actions/.github/actions/delete-image@v1
         with:
-          images: "kickstart"
+          images: "mail-webhooks"
           delete_image_token: ${{ secrets.IMAGES_CLEANUP_TOKEN }}
