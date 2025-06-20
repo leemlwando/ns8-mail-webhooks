@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2025 Lee M. Lwando
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+
+# Read input from stdin
+input_data = json.load(sys.stdin)
+
+# TODO: Replace with actual database implementation
+# For now, simulate updating a webhook
+updated_webhook = {
+    "id": input_data["id"],
+    "email": input_data["email"],
+    "url": input_data["url"],
+    "enabled": input_data["enabled"],
+    "post_action": input_data["post_action"],
+    "payload_type": input_data["payload_type"],
+    "created_at": "2025-01-15T10:30:00Z",  # This would come from DB
+    "last_triggered": "2025-01-20T14:22:00Z",  # This would come from DB
+    "trigger_count": 25  # This would come from DB
+}
+
+# TODO: Update in database
+print(f"DEBUG: Would update webhook: {updated_webhook}", file=sys.stderr)
+
+# Return the updated webhook
+json.dump(updated_webhook, fp=sys.stdout)

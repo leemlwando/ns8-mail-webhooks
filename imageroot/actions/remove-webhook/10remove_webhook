@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2025 Lee M. Lwando
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+
+# Read input from stdin
+input_data = json.load(sys.stdin)
+
+webhook_id = input_data["id"]
+
+# TODO: Replace with actual database implementation
+# For now, simulate removing a webhook
+print(f"DEBUG: Would remove webhook with ID: {webhook_id}", file=sys.stderr)
+
+# Return success
+json.dump({"success": True, "removed_id": webhook_id}, fp=sys.stdout)

@@ -1,0 +1,44 @@
+#
+# Copyright (C) 2025 Lee M. Lwando
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements file
+COPY pypkg/requirements.txt /app/requirements.txt
+
+# Install Python dependencies
+RUN python3 -m pip install --no-cache-dir -r requirements.txt
+
+# Copy the imageroot and pypkg
+COPY pypkg/ /app/pypkg/
+COPY bin/ /app/bin/
+COPY actions/ /app/actions/
+COPY events/ /app/events/
+COPY systemd/ /app/systemd/
+
+# Set environment
+ENV PYTHONPATH="/app/pypkg:${PYTHONPATH}"
+ENV STATE_DIR="/app/state"
+
+# Create state directory
+RUN mkdir -p /app/state
+
+# Make binaries executable
+RUN chmod +x /app/bin/*
+
+# Expose the port for the service
+EXPOSE 8080
+
+# Set the entrypoint
+ENTRYPOINT ["/app/bin/entrypoint-wrapper.sh"]

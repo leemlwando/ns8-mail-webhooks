@@ -1,0 +1,12 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "list-email-addresses output",
+    "$id": "http://schema.nethserver.org/mail-webhooks/list-email-addresses-output.json",
+    "description": "List of available email addresses",
+    "type": "array",
+    "items": {
+        "type": "string",
+        "format": "email",
+        "description": "Email address"
+    }
+}

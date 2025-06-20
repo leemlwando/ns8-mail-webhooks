@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2025 Lee M. Lwando
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+
+# TODO: Replace with actual email addresses from mail system
+# For now, return dummy email addresses
+email_addresses = [
+    "admin@example.com",
+    "user1@example.com", 
+    "user2@example.com",
+    "support@example.com",
+    "info@mydomain.com",
+    "sales@mydomain.com"
+]
+
+json.dump(email_addresses, fp=sys.stdout)

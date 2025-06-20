@@ -1,0 +1,19 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "remove-webhook output",
+    "$id": "http://schema.nethserver.org/mail-webhooks/remove-webhook-output.json",
+    "description": "Webhook removal result",
+    "type": "object",
+    "properties": {
+        "success": {
+            "type": "boolean",
+            "description": "Whether removal was successful"
+        },
+        "removed_id": {
+            "type": "string",
+            "description": "ID of removed webhook"
+        }
+    },
+    "required": ["success", "removed_id"],
+    "additionalProperties": false
+}

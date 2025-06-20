@@ -1,0 +1,54 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "edit-webhook output",
+    "$id": "http://schema.nethserver.org/mail-webhooks/edit-webhook-output.json",
+    "description": "Updated webhook details",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string",
+            "description": "Unique webhook identifier"
+        },
+        "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address to monitor"
+        },
+        "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Webhook URL endpoint"
+        },
+        "enabled": {
+            "type": "boolean",
+            "description": "Whether webhook is active"
+        },
+        "post_action": {
+            "type": "string",
+            "enum": ["none", "mark_as_read", "delete"],
+            "description": "Action to perform after webhook trigger"
+        },
+        "payload_type": {
+            "type": "string",
+            "enum": ["raw", "json"],
+            "description": "Format of webhook payload"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Webhook creation timestamp"
+        },
+        "last_triggered": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Last webhook trigger timestamp"
+        },
+        "trigger_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of times webhook has been triggered"
+        }
+    },
+    "required": ["id", "email", "url", "enabled", "post_action", "payload_type", "created_at"],
+    "additionalProperties": false
+}

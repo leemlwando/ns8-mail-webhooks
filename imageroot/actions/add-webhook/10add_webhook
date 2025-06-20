@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2025 Lee M. Lwando
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+import uuid
+from datetime import datetime
+
+# Read input from stdin
+input_data = json.load(sys.stdin)
+
+# TODO: Replace with actual database implementation
+# For now, create a new webhook with dummy ID
+new_webhook = {
+    "id": str(uuid.uuid4()),
+    "email": input_data["email"],
+    "url": input_data["url"],
+    "enabled": input_data.get("enabled", True),
+    "post_action": input_data.get("post_action", "none"),
+    "payload_type": input_data.get("payload_type", "json"),
+    "created_at": datetime.utcnow().isoformat() + "Z",
+    "last_triggered": None,
+    "trigger_count": 0
+}
+
+# TODO: Save to database
+print(f"DEBUG: Would save webhook: {new_webhook}", file=sys.stderr)
+
+# Return the created webhook
+json.dump(new_webhook, fp=sys.stdout)

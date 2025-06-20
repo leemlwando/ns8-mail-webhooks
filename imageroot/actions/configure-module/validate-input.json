@@ -3,6 +3,51 @@
     "title": "configure-module input",
     "$id": "http://schema.nethserver.org/mail-webhooks/configure-module-input.json",
     "description": "Configure mail-webhooks",
-    "examples": [],
-    "type": "object"
+    "examples": [
+        {
+            "smarthost_enabled": true,
+            "smarthost_host": "smtp.example.com",
+            "smarthost_port": 587,
+            "smarthost_username": "user@example.com",
+            "smarthost_password": "password123",
+            "smarthost_tls_enabled": true
+        }
+    ],
+    "type": "object",
+    "properties": {
+        "smarthost_enabled": {
+            "type": "boolean",
+            "title": "Enable smarthost",
+            "description": "Enable SMTP smarthost for webhook notifications"
+        },
+        "smarthost_host": {
+            "type": "string",
+            "title": "Smarthost hostname",
+            "description": "SMTP server hostname"
+        },
+        "smarthost_port": {
+            "type": "integer",
+            "title": "Smarthost port",
+            "description": "SMTP server port",
+            "default": 587,
+            "minimum": 1,
+            "maximum": 65535
+        },
+        "smarthost_username": {
+            "type": "string",
+            "title": "SMTP username",
+            "description": "Username for SMTP authentication"
+        },
+        "smarthost_password": {
+            "type": "string",
+            "title": "SMTP password",
+            "description": "Password for SMTP authentication"
+        },
+        "smarthost_tls_enabled": {
+            "type": "boolean",
+            "title": "Enable TLS",
+            "description": "Enable TLS encryption for SMTP connection",
+            "default": true
+        }
+    }
 }

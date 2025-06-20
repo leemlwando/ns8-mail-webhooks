@@ -1,0 +1,32 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "trigger-webhook output",
+    "$id": "http://schema.nethserver.org/mail-webhooks/trigger-webhook-output.json",
+    "description": "Webhook trigger result",
+    "type": "object",
+    "properties": {
+        "success": {
+            "type": "boolean",
+            "description": "Whether trigger was successful"
+        },
+        "webhook_id": {
+            "type": "string",
+            "description": "ID of triggered webhook"
+        },
+        "triggered_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Trigger timestamp"
+        },
+        "response_status": {
+            "type": "integer",
+            "description": "HTTP response status from webhook endpoint"
+        },
+        "response_message": {
+            "type": "string",
+            "description": "Response message or error details"
+        }
+    },
+    "required": ["success", "webhook_id", "triggered_at"],
+    "additionalProperties": false
+}

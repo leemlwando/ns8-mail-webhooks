@@ -1,0 +1,15 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "trigger-webhook input",
+    "$id": "http://schema.nethserver.org/mail-webhooks/trigger-webhook-input.json",
+    "description": "Manually trigger a webhook",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string",
+            "description": "Webhook ID to trigger"
+        }
+    },
+    "required": ["id"],
+    "additionalProperties": false
+}

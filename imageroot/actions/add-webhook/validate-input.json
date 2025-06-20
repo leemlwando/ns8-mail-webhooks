@@ -1,0 +1,38 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "add-webhook input",
+    "$id": "http://schema.nethserver.org/mail-webhooks/add-webhook-input.json",
+    "description": "Add a new email webhook",
+    "type": "object",
+    "properties": {
+        "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address to monitor"
+        },
+        "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Webhook URL endpoint"
+        },
+        "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether webhook is active"
+        },
+        "post_action": {
+            "type": "string",
+            "enum": ["none", "mark_as_read", "delete"],
+            "default": "none",
+            "description": "Action to perform after webhook trigger"
+        },
+        "payload_type": {
+            "type": "string",
+            "enum": ["raw", "json"],
+            "default": "json",
+            "description": "Format of webhook payload"
+        }
+    },
+    "required": ["email", "url"],
+    "additionalProperties": false
+}

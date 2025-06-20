@@ -1,0 +1,15 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "remove-webhook input",
+    "$id": "http://schema.nethserver.org/mail-webhooks/remove-webhook-input.json",
+    "description": "Remove an email webhook",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string",
+            "description": "Webhook ID to remove"
+        }
+    },
+    "required": ["id"],
+    "additionalProperties": false
+}
