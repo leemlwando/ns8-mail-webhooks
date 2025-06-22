@@ -23,14 +23,40 @@
       <cv-column>
         <cv-tile light>
           <cv-form @submit.prevent="configureModule">
-            <!-- TODO remove test field and code configuration fields -->
             <cv-text-input
-              :label="$t('settings.test_field')"
-              v-model="testField"
-              :placeholder="$t('settings.test_field')"
+              :label="$t('settings.mongodb_url')"
+              v-model="mongodbUrl"
+              :placeholder="$t('settings.mongodb_url_placeholder')"
               :disabled="loading.getConfiguration || loading.configureModule"
-              :invalid-message="error.testField"
-              ref="testField"
+              :invalid-message="error.mongodbUrl"
+              ref="mongodbUrl"
+            ></cv-text-input>
+
+            <cv-text-input
+              :label="$t('settings.webhooks_collection')"
+              v-model="webhooksCollection"
+              :placeholder="$t('settings.webhooks_collection_placeholder')"
+              :disabled="loading.getConfiguration || loading.configureModule"
+              :invalid-message="error.webhooksCollection"
+              ref="webhooksCollection"
+            ></cv-text-input>
+
+            <cv-text-input
+              :label="$t('settings.jobs_collection')"
+              v-model="jobsCollection"
+              :placeholder="$t('settings.jobs_collection_placeholder')"
+              :disabled="loading.getConfiguration || loading.configureModule"
+              :invalid-message="error.jobsCollection"
+              ref="jobsCollection"
+            ></cv-text-input>
+
+            <cv-text-input
+              :label="$t('settings.logs_collection')"
+              v-model="logsCollection"
+              :placeholder="$t('settings.logs_collection_placeholder')"
+              :disabled="loading.getConfiguration || loading.configureModule"
+              :invalid-message="error.logsCollection"
+              ref="logsCollection"
             ></cv-text-input>
             <cv-row v-if="error.configureModule">
               <cv-column>
@@ -85,7 +111,10 @@ export default {
         page: "settings",
       },
       urlCheckInterval: null,
-      testField: "", // TODO remove
+      mongodbUrl: "",
+      webhooksCollection: "webhooks",
+      jobsCollection: "jobs",
+      logsCollection: "logs",
       loading: {
         getConfiguration: false,
         configureModule: false,
@@ -93,8 +122,10 @@ export default {
       error: {
         getConfiguration: "",
         configureModule: "",
-        testField: "", // TODO remove
-        // TODO add all validation error fields
+        mongodbUrl: "",
+        webhooksCollection: "",
+        jobsCollection: "",
+        logsCollection: "",
       },
     };
   },
@@ -161,30 +192,114 @@ export default {
       this.loading.getConfiguration = false;
       const config = taskResult.output;
 
-      // TODO set configuration fields
-      // ...
+      // Set configuration fields
+      this.mongodbUrl = config.mongodb_url || "";
+      this.webhooksCollection = config.webhooks_collection || "webhooks";
+      this.jobsCollection = config.jobs_collection || "jobs";
+      this.logsCollection = config.logs_collection || "logs";
 
-      // TODO remove
       console.log("config", config);
 
-      // TODO focus first configuration field
-      this.focusElement("testField");
+      // Focus first configuration field
+      this.focusElement("mongodbUrl");
     },
     validateConfigureModule() {
       this.clearErrors(this);
       let isValidationOk = true;
 
-      // TODO remove testField and validate configuration fields
-      if (!this.testField) {
-        // test field cannot be empty
-        this.error.testField = this.$t("common.required");
-
+      // Validate MongoDB URL
+      if (!this.mongodbUrl) {
+        this.error.mongodbUrl = this.$t("common.required");
         if (isValidationOk) {
-          this.focusElement("testField");
+          this.focusElement("mongodbUrl");
+          isValidationOk = false;
+        }
+      } else if (!this.isValidMongoUrl(this.mongodbUrl)) {
+        this.error.mongodbUrl = this.$t("settings.invalid_mongodb_url");
+        if (isValidationOk) {
+          this.focusElement("mongodbUrl");
           isValidationOk = false;
         }
       }
+
+      // Validate webhooks collection name
+      if (!this.webhooksCollection) {
+        this.error.webhooksCollection = this.$t("common.required");
+        if (isValidationOk) {
+          this.focusElement("webhooksCollection");
+          isValidationOk = false;
+        }
+      } else if (!this.isValidCollectionName(this.webhooksCollection)) {
+        this.error.webhooksCollection = this.$t(
+          "settings.invalid_collection_name"
+        );
+        if (isValidationOk) {
+          this.focusElement("webhooksCollection");
+          isValidationOk = false;
+        }
+      }
+
+      // Validate jobs collection name
+      if (!this.jobsCollection) {
+        this.error.jobsCollection = this.$t("common.required");
+        if (isValidationOk) {
+          this.focusElement("jobsCollection");
+          isValidationOk = false;
+        }
+      } else if (!this.isValidCollectionName(this.jobsCollection)) {
+        this.error.jobsCollection = this.$t("settings.invalid_collection_name");
+        if (isValidationOk) {
+          this.focusElement("jobsCollection");
+          isValidationOk = false;
+        }
+      }
+
+      // Validate logs collection name
+      if (!this.logsCollection) {
+        this.error.logsCollection = this.$t("common.required");
+        if (isValidationOk) {
+          this.focusElement("logsCollection");
+          isValidationOk = false;
+        }
+      } else if (!this.isValidCollectionName(this.logsCollection)) {
+        this.error.logsCollection = this.$t("settings.invalid_collection_name");
+        if (isValidationOk) {
+          this.focusElement("logsCollection");
+          isValidationOk = false;
+        }
+      }
+
+      // Check for duplicate collection names
+      const collections = [
+        this.webhooksCollection,
+        this.jobsCollection,
+        this.logsCollection,
+      ];
+      const uniqueCollections = [...new Set(collections)];
+      if (collections.length !== uniqueCollections.length) {
+        this.error.webhooksCollection = this.$t(
+          "settings.duplicate_collection_names"
+        );
+        if (isValidationOk) {
+          this.focusElement("webhooksCollection");
+          isValidationOk = false;
+        }
+      }
+
       return isValidationOk;
+    },
+
+    isValidMongoUrl(url) {
+      // Validate MongoDB connection strings (both mongodb:// and mongodb+srv://)
+      const mongoUrlPattern = /^mongodb(\+srv)?:\/\/[^\s]+$/;
+      return mongoUrlPattern.test(url);
+    },
+
+    isValidCollectionName(name) {
+      // MongoDB collection names must start with letter or underscore
+      // and contain only letters, numbers, and underscores
+      const collectionNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+      return collectionNamePattern.test(name) && name.length <= 64;
     },
     configureModuleValidationFailed(validationErrors) {
       this.loading.configureModule = false;
@@ -236,7 +351,10 @@ export default {
         this.createModuleTaskForApp(this.instanceName, {
           action: taskAction,
           data: {
-            // TODO configuration fields
+            mongodb_url: this.mongodbUrl,
+            webhooks_collection: this.webhooksCollection,
+            jobs_collection: this.jobsCollection,
+            logs_collection: this.logsCollection,
           },
           extra: {
             title: this.$t("settings.configure_instance", {

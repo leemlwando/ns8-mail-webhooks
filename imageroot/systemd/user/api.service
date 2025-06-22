@@ -1,0 +1,44 @@
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+#
+# This systemd unit starts the Mail Webhooks API server in the mail-webhooks pod
+#
+[Unit]
+Description=Podman api.service
+BindsTo=mail-webhooks.service
+After=mail-webhooks.service
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+EnvironmentFile=%S/state/environment
+EnvironmentFile=-%S/state/smarthost.env
+WorkingDirectory=%S/state
+Restart=always
+RestartSec=5
+ExecStartPre=/bin/rm -f %t/api.pid %t/api.ctr-id
+ExecStartPre=-runagent discover-smarthost
+ExecStart=/usr/bin/podman run \
+    --detach \
+    --conmon-pidfile=%t/api.pid \
+    --cidfile=%t/api.ctr-id \
+    --cgroups=no-conmon \
+    --replace --name=api \
+    --pod-id-file=%t/mail-webhooks.pod-id \
+    --env-file=environment \
+    --env-file=smarthost.env \
+    --env=MONGODB_* \
+    --volume=./data:/app/data:z \
+    --volume=./logs:/app/logs:z \
+    ${MAIL_WEBHOOKS_API_IMAGE}
+ExecStop=/usr/bin/podman stop --ignore --cidfile %t/api.ctr-id -t 10
+ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/api.ctr-id
+ExecReload=/usr/bin/podman kill -s HUP api
+PIDFile=%t/api.pid
+Type=forking
+SyslogIdentifier=%N
+
+[Install]
+WantedBy=default.target

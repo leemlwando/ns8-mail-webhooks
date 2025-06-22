@@ -1,0 +1,39 @@
+#
+# Copyright (C) 2025 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+#
+# This systemd unit starts the Mail Webhooks UI server in the mail-webhooks pod
+#
+[Unit]
+Description=Podman ui.service
+BindsTo=mail-webhooks.service
+After=mail-webhooks.service
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+EnvironmentFile=%S/state/environment
+EnvironmentFile=-%S/state/smarthost.env
+WorkingDirectory=%S/state
+Restart=always
+RestartSec=5
+ExecStartPre=/bin/rm -f %t/ui.pid %t/ui.ctr-id
+ExecStartPre=-runagent discover-smarthost
+ExecStart=/usr/bin/podman run \
+    --detach \
+    --conmon-pidfile=%t/ui.pid \
+    --cidfile=%t/ui.ctr-id \
+    --cgroups=no-conmon \
+    --replace --name=ui \
+    --pod-id-file=%t/mail-webhooks.pod-id \
+    --env-file=smarthost.env \
+    ${MAIL_WEBHOOKS_IMAGE}
+ExecStop=/usr/bin/podman stop --ignore --cidfile %t/ui.ctr-id -t 10
+ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/ui.ctr-id
+PIDFile=%t/ui.pid
+Type=forking
+SyslogIdentifier=%N
+
+[Install]
+WantedBy=default.target

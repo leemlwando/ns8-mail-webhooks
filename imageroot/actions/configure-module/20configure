@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 #
-# Copyright (C) 2023 Nethesis S.r.l.
+# Copyright (C) 2025 Leemlwando  
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
@@ -11,13 +11,25 @@ import agent
 import agent.tasks
 import os
 
-request = json.load(sys.stdin)
+# Try to parse the stdin as JSON.
+# If parsing fails, output everything to stderr
+try:
+    request = json.load(sys.stdin)
+except json.JSONDecodeError as e:
+    print(f"Invalid JSON input: {e}", file=sys.stderr)
+    sys.exit(1)
 
-# TODO: do something with the request payload. For example configure a
-# custom route in our web router. Here the path is hardcoded as
-# 'kickstart'.
+# Extract configuration parameters with validation
+mongodb_url = request.get('mongodb_url')
+if not mongodb_url:
+    print("Error: mongodb_url is required", file=sys.stderr)
+    sys.exit(1)
 
-# Configure Traefik to route "/kickstart" path requests to the kickstart service
+webhooks_collection = request.get('webhooks_collection', 'webhooks')
+jobs_collection = request.get('jobs_collection', 'jobs')
+logs_collection = request.get('logs_collection', 'logs')
+
+# Configure Traefik to route "/mail-webhooks" path requests to the UI service
 response = agent.tasks.run(
     agent_id=agent.resolve_agent_id('traefik@node'),
     action='set-route',
@@ -26,9 +38,25 @@ response = agent.tasks.run(
         'url':  'http://127.0.0.1:' + os.environ["TCP_PORT"],
         'http2https': False,
         'lets_encrypt': False,
-        'path': '/kickstart',
+        'path': '/mail-webhooks',
     },
 )
 
-# Check if traefik configuration has been successfull
+# Check if traefik configuration has been successful
 agent.assert_exp(response['exit_code'] == 0)
+
+# Store configuration in environment
+agent.set_env('MONGODB_URL', mongodb_url)
+agent.set_env('MONGODB_WEBHOOKS_COLLECTION', webhooks_collection)
+agent.set_env('MONGODB_JOBS_COLLECTION', jobs_collection)
+agent.set_env('MONGODB_LOGS_COLLECTION', logs_collection)
+
+# Set the main UI image environment variable
+agent.set_env('MAIL_WEBHOOKS_IMAGE', f'ghcr.io/leemlwando/ns8-mail-webhooks:{os.environ.get("IMAGETAG", "latest")}')
+
+# Set the API image environment variable - this references the API image built in build-images.sh
+agent.set_env('MAIL_WEBHOOKS_API_IMAGE', f'ghcr.io/leemlwando/ns8-mail-webhooks-api:{os.environ.get("IMAGETAG", "latest")}')
+
+# Make sure everything is saved inside the environment file
+# just before starting systemd unit
+agent.dump_env()

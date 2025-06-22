@@ -1,65 +1,70 @@
-# ns8-kickstart
+# ns8-mail-webhooks
 
-This is a template module for [NethServer 8](https://github.com/NethServer/ns8-core).
-To start a new module from it:
+A NethServer 8 module for managing mail webhooks. This module allows you to configure webhooks that are triggered when emails are received, providing integration with external services and APIs.
 
-1. Click on [Use this template](https://github.com/NethServer/ns8-kickstart/generate).
-   Name your repo with `ns8-` prefix (e.g. `ns8-mymodule`). 
-   Do not end your module name with a number, like ~~`ns8-baaad2`~~!
+## Features
 
-1. Clone the repository, enter the cloned directory and
-   [configure your GIT identity](https://git-scm.com/book/en/v2/Getting-Started-First-Time-Git-Setup#_your_identity)
-
-1. Rename some references inside the repo:
-   ```
-   modulename=$(basename $(pwd) | sed 's/^ns8-//')
-   git mv imageroot/systemd/user/kickstart.service imageroot/systemd/user/${modulename}.service
-   git mv tests/kickstart.robot tests/${modulename}.robot
-   sed -i "s/kickstart/${modulename}/g" $(find .github/ * -type f)
-   git commit -a -m "Repository initialization"
-   ```
-
-1. Edit this `README.md` file, by replacing this section with your module
-   description
-
-1. Adjust `.github/workflows` to your needs. `clean-registry.yml` might
-   need the proper list of image names to work correctly. Unused workflows
-   can be disabled from the GitHub Actions interface.
-
-1. Commit and push your local changes
+- **MongoDB Integration**: Store webhook configurations and email data in MongoDB
+- **Flexible Webhook Configuration**: Support for both real-time and scheduled webhook triggers
+- **Multiple Payload Types**: Send webhooks as JSON or raw format
+- **Post-processing Actions**: Mark emails as read or delete them after webhook execution
+- **Web UI**: User-friendly interface for managing webhook configurations
+- **Email Domain Integration**: Automatically discover available email domains from NS8 mail server
 
 ## Install
 
 Instantiate the module with:
 
-    add-module ghcr.io/nethserver/kickstart:latest 1
+    add-module ghcr.io/leemlwando/ns8-mail-webhooks:latest 1
 
 The output of the command will return the instance name.
 Output example:
 
-    {"module_id": "kickstart1", "image_name": "kickstart", "image_url": "ghcr.io/nethserver/kickstart:latest"}
+    {"module_id": "mail-webhooks1", "image_name": "ns8-mail-webhooks", "image_url": "ghcr.io/leemlwando/ns8-mail-webhooks:latest"}
 
 ## Configure
 
-Let's assume that the kickstart instance is named `kickstart1`.
+Let's assume that the mail-webhooks instance is named `mail-webhooks1`.
 
-Launch `configure-module`, by setting the following parameters:
-- `<MODULE_PARAM1_NAME>`: <MODULE_PARAM1_DESCRIPTION>
-- `<MODULE_PARAM2_NAME>`: <MODULE_PARAM2_DESCRIPTION>
-- ...
+### Settings Configuration
+
+Configure the module with the following parameters:
+- `mongodb_url`: MongoDB connection URL (e.g., `mongodb://localhost:27017/mailwebhooks`)
+- `webhooks_collection`: Collection name for storing webhook configurations (default: `webhooks`)
+- `emails_collection`: Collection name for storing email data (default: `emails`)
+- `logs_collection`: Collection name for storing execution logs (default: `logs`)
+
+Example:
+```bash
+api-cli run configure-module --agent module/mail-webhooks1 --data '{"mongodb_url":"mongodb://localhost:27017/mailwebhooks","webhooks_collection":"webhooks","emails_collection":"emails","logs_collection":"logs"}'
+```
+
+### Webhook Configuration
+
+Use the web interface to configure webhooks with the following options:
+
+- **Name**: Descriptive name for the webhook
+- **URL**: Target endpoint for webhook delivery
+- **API Key**: Optional authentication key
+- **Email Address**: Email address to monitor (selected from available domains)
+- **Payload Type**: JSON or Raw format
+- **Post Action**: None, Mark as Read, or Delete email after processing
+- **Trigger Type**: Real-time or Scheduled execution
+- **Schedule Interval**: For scheduled webhooks (5min, 15min, 30min, 1hour, 6hours, 12hours, 24hours)
+- **Enabled**: Toggle webhook on/off
 
 Example:
 
-    api-cli run module/kickstart1/configure-module --data '{}'
+    api-cli run module/mail-webhooks1/configure-module --data '{}'
 
 The above command will:
-- start and configure the kickstart instance
+- start and configure the mail-webhooks instance
 - (describe configuration process)
 - ...
 
-Send a test HTTP request to the kickstart backend service:
+Send a test HTTP request to the mail-webhooks backend service:
 
-    curl http://127.0.0.1/kickstart/
+    curl http://127.0.0.1/mail-webhooks/
 
 ## Smarthost setting discovery
 
@@ -68,14 +73,14 @@ Some configuration settings, like the smarthost setup, are not part of the
 Redis keys.  To ensure the module is always up-to-date with the
 centralized [smarthost
 setup](https://nethserver.github.io/ns8-core/core/smarthost/) every time
-kickstart starts, the command `bin/discover-smarthost` runs and refreshes
+mail-webhooks starts, the command `bin/discover-smarthost` runs and refreshes
 the `state/smarthost.env` file with fresh values from Redis.
 
-Furthermore if smarthost setup is changed when kickstart is already
+Furthermore if smarthost setup is changed when mail-webhooks is already
 running, the event handler `events/smarthost-changed/10reload_services`
 restarts the main module service.
 
-See also the `systemd/user/kickstart.service` file.
+See also the `systemd/user/mail-webhooks.service` file.
 
 This setting discovery is just an example to understand how the module is
 expected to work: it can be rewritten or discarded completely.

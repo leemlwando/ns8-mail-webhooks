@@ -1,12 +1,26 @@
 #!/bin/bash
 
 #
-# Copyright (C) 2023 Nethesis S.r.l.
+# Copyright (C) 2025 Leemlwando  
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-# If the control reaches this step, the service can be enabled and started
+set -e
 
+# Redirect any output to the journal (stderr)
+exec 1>&2
+
+# If the control reaches this step, the services can be enabled and started
+
+# Create required directories
+mkdir -p data logs
+
+# Create smarthost.env file
 touch smarthost.env
 
-systemctl --user enable --now kickstart.service
+# Enable and start the main pod service (this will create the pod and start all services)
+systemctl --user enable mail-webhooks.service
+systemctl --user restart mail-webhooks.service
+
+# The individual services (api.service and ui.service) will be started
+# automatically due to the Requires/Before dependencies in mail-webhooks.service

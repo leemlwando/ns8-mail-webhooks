@@ -1,14 +1,27 @@
 #!/usr/bin/env python3
 
 #
-# Copyright (C) 2023 Nethesis S.r.l.
+# Copyright (C) 2025 Leemlwando
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
 import json
 import sys
+import os
 import agent
 
-config = {}
+config = {
+    'mongodb_url': '',
+    'webhooks_collection': 'webhooks',
+    'jobs_collection': 'jobs', 
+    'logs_collection': 'logs'
+}
 
+# Read configuration from environment variables
+config['mongodb_url'] = os.environ.get('MONGODB_URL', '')
+config['webhooks_collection'] = os.environ.get('MONGODB_WEBHOOKS_COLLECTION', 'webhooks')
+config['jobs_collection'] = os.environ.get('MONGODB_JOBS_COLLECTION', 'jobs')
+config['logs_collection'] = os.environ.get('MONGODB_LOGS_COLLECTION', 'logs')
+
+# Output configuration as JSON
 json.dump(config, fp=sys.stdout)

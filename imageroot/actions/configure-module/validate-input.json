@@ -1,8 +1,51 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "configure-module input",
-    "$id": "http://schema.nethserver.org/kickstart/configure-module-input.json",
-    "description": "Configure kickstart",
-    "examples": [],
-    "type": "object"
+    "$id": "http://schema.nethserver.org/mail-webhooks/configure-module.json",
+    "description": "Configuration of the Mail Webhooks module",
+    "examples": [
+        {
+            "mongodb_url": "mongodb://localhost:27017/mailwebhooks",
+            "webhooks_collection": "webhooks",
+            "jobs_collection": "jobs",
+            "logs_collection": "logs"
+        }
+    ],
+    "type": "object",
+    "required": [
+        "mongodb_url",
+        "webhooks_collection", 
+        "jobs_collection",
+        "logs_collection"
+    ],
+    "properties": {
+        "mongodb_url": {
+            "type": "string",
+            "title": "MongoDB connection URL",
+            "description": "MongoDB connection string for webhook data storage",
+            "minLength": 1,
+            "pattern": "^mongodb(\\+srv)?://.*"
+        },
+        "webhooks_collection": {
+            "type": "string", 
+            "title": "Webhooks collection name",
+            "description": "MongoDB collection name for storing webhook configurations",
+            "minLength": 1,
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        },
+        "jobs_collection": {
+            "type": "string",
+            "title": "Jobs collection name", 
+            "description": "MongoDB collection name for storing job queue data",
+            "minLength": 1,
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        },
+        "logs_collection": {
+            "type": "string",
+            "title": "Logs collection name",
+            "description": "MongoDB collection name for storing webhook execution logs",
+            "minLength": 1,
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        }
+    }
 }

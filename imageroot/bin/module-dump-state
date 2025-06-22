@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2025 Leemlwando  
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+#
+# Standard module state dump utility
+#
+
+import os
+import sys
+import json
+import agent
+
+# Collect module state for backup/restore
+state = {
+    'module_id': os.environ.get('MODULE_ID'),
+    'module_uuid': os.environ.get('MODULE_UUID'),
+    'environment': {},
+    'volumes': ['data', 'logs']
+}
+
+# Read environment variables
+try:
+    with open(os.path.expanduser('~/.config/state/environment'), 'r') as f:
+        for line in f:
+            if '=' in line:
+                key, value = line.strip().split('=', 1)
+                state['environment'][key] = value
+except FileNotFoundError:
+    pass
+
+# Output state as JSON
+print(json.dumps(state, indent=2))

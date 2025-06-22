@@ -2,7 +2,15 @@
     "common": {
         "required": "Required",
         "work_in_progress": "Work in progress",
-        "processing": "Processing..."
+        "processing": "Processing...",
+        "save": "Save",
+        "saving": "Saving...",
+        "cancel": "Cancel",
+        "edit": "Edit",
+        "delete": "Delete",
+        "actions": "Actions",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
     },
     "status": {
         "title": "Status",
@@ -24,10 +32,64 @@
         "title": "Settings",
         "configure_instance": "Configure {instance}",
         "save": "Save",
-        "test_field": "Test field"
+        "mongodb_url": "MongoDB URL",
+        "mongodb_url_placeholder": "mongodb://localhost:27017/mailwebhooks or mongodb+srv://cluster.mongodb.net/db",
+        "webhooks_collection": "Webhooks Collection",
+        "webhooks_collection_placeholder": "webhooks",
+        "jobs_collection": "Jobs Collection", 
+        "jobs_collection_placeholder": "jobs",
+        "logs_collection": "Logs Collection",
+        "logs_collection_placeholder": "logs",
+        "invalid_mongodb_url": "Please enter a valid MongoDB URL (mongodb:// or mongodb+srv://)",
+        "invalid_collection_name": "Collection name must start with a letter or underscore and contain only letters, numbers, and underscores",
+        "duplicate_collection_names": "Collection names must be unique"
     },
     "about": {
         "title": "About"
+    },
+    "webhooks": {
+        "title": "Webhooks",
+        "add_webhook": "Add Webhook",
+        "create_webhook": "Create Webhook",
+        "edit_webhook": "Edit Webhook",
+        "delete_webhook": "Delete Webhook",
+        "delete_webhook_confirm": "Are you sure you want to delete webhook '{name}'?",
+        "index": "#",
+        "enabled": "Enabled",
+        "name": "Name",
+        "url": "URL", 
+        "email_address": "Email Address",
+        "payload_type": "Payload Type",
+        "post_action": "Post Action",
+        "trigger_type": "Trigger Type",
+        "last_run": "Last Run",
+        "next_run": "Next Run",
+        "name_placeholder": "Enter webhook name",
+        "url_placeholder": "https://api.example.com/webhook",
+        "api_key": "API Key",
+        "api_key_placeholder": "Optional API key for authentication",
+        "schedule_interval": "Schedule Interval",
+        "invalid_url": "Please enter a valid URL",
+        "payload_json": "JSON",
+        "payload_raw": "Raw",
+        "action_none": "None",
+        "action_mark_read": "Mark as Read",
+        "action_delete": "Delete",
+        "trigger_realtime": "Real Time",
+        "trigger_scheduled": "Scheduled", 
+        "interval_5min": "Every 5 minutes",
+        "interval_15min": "Every 15 minutes",
+        "interval_30min": "Every 30 minutes",
+        "interval_1hour": "Every hour",
+        "interval_6hours": "Every 6 hours",
+        "interval_12hours": "Every 12 hours",
+        "interval_24hours": "Every 24 hours",
+        "no_webhooks": "No webhooks configured",
+        "no_webhooks_description": "Get started by creating your first webhook to forward emails to external services.",
+        "create_first_webhook": "Create your first webhook",
+        "webhook_actions": "Webhook actions",
+        "enable_webhook": "Enable webhook",
+        "disable_webhook": "Disable webhook"
     },
     "task": {
         "cannot_create_task": "Cannot create task {action}"
@@ -40,7 +102,10 @@
         "get-name": "Get name",
         "list-backup-repositories": "List backup repositories",
         "list-backups": "List backups",
-        "list-installed-modules": "List installed modules"
+        "list-installed-modules": "List installed modules",
+        "get-webhooks": "Get webhooks",
+        "save-webhook": "Save webhook",
+        "delete-webhook": "Delete webhook"
     },
     "error": {
         "error": "Error",
@@ -52,6 +117,7 @@
         "403": "Operation not authorized",
         "404": "Resource not found",
         "cannot_retrieve_module_info": "Cannot retrieve module info",
-        "cannot_retrieve_installed_modules": "Cannot retrieve installed modules"
+        "cannot_retrieve_installed_modules": "Cannot retrieve installed modules",
+        "cannot_save_webhook": "Cannot save webhook"
     }
 }

@@ -1,19 +1,19 @@
 {
-  "name": "kickstart",
+  "name": "Mail Webhooks",
   "description": {
-    "en": "My kickstart module"
+    "en": "Mail Webhooks is a nethserver app that allows you to configure webhooks for incoming emails. It provides a user interface to manage webhooks, including adding, editing, and deleting them. The app supports MongoDB for storing webhook configurations and email data."
   },
-  "categories": [],
+  "categories": ["mail"],
   "authors": [
     {
-      "name": "Name Surname",
-      "email": "author@yourmail.org"
+      "name": "Lee M. Lwando",
+      "email": "leemlwando@gmail.com"
     }
   ],
   "docs": {
-    "documentation_url": "https://docs.kickstart.com/",
-    "bug_url": "https://github.com/NethServer/dev",
-    "code_url": "https://github.com/author/ns8-kickstart"
+    "documentation_url": "https://github.com/leemlwando/ns8-mail-webhooks",
+    "bug_url": "https://github.com/leemlwando/ns8-mail-webhooks/issues",
+    "code_url": "https://github.com/leemlwando/ns8-mail-webhooks"
   },
-  "source": "ghcr.io/nethserver/kickstart"
+  "source": "ghcr.io/leemlwando/ns8-mail-webhooks"
 }
